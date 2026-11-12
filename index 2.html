@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0b10">
+<title>Glowmap</title>
+<style>
+:root{--bg:#0b0b10;--panel:#15151d;--panel2:#1d1d28;--line:#2b2b3a;--txt:#ececf3;--mute:#8b8ba3;--acc:#7c5cff;--ok:#30d158;--bad:#ff453a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
+button{font:inherit;color:inherit;touch-action:manipulation}
+.view{display:none;height:100%}
+.view.on{display:flex}
+.mute{color:var(--mute)}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.big{padding:14px 20px;font-size:17px;border-radius:14px}
+.btn.danger{color:var(--bad)}
+.btn.blk.on{background:var(--bad);border-color:var(--bad)}
+
+/* home */
+#home{flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
+#home h1{margin:0;font-size:38px;letter-spacing:-1px}
+#home h1 span{background:linear-gradient(90deg,#ff2d55,#ffd60a,#30d158,#0a84ff,#bf5af2);-webkit-background-clip:text;background-clip:text;color:transparent}
+.roles{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.role{width:230px;padding:22px;border-radius:18px;background:var(--panel);border:1px solid var(--line);cursor:pointer;text-align:left}
+.role b{display:block;font-size:19px;margin:6px 0 4px}
+.role .ic{font-size:30px}
+
+/* projector */
+#proj{position:fixed;inset:0;background:#000;cursor:none}
+#proj.cur{cursor:default}
+#proj canvas{position:absolute;inset:0;width:100%;height:100%}
+#pinfo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(20,20,30,.92);border:1px solid #333;border-radius:24px;padding:36px 48px;text-align:center;min-width:420px}
+#pinfo .code{font-size:96px;font-weight:800;letter-spacing:14px;margin:6px 0 4px;font-family:ui-monospace,Menlo,monospace}
+#pinfo .row{display:flex;gap:10px;justify-content:center;margin-top:18px}
+#ptag{position:absolute;left:14px;top:12px;font:600 15px ui-monospace,Menlo,monospace;color:#aaa;background:rgba(0,0,0,.6);padding:4px 8px;border-radius:6px;display:none}
+
+/* remote */
+#remote{flex-direction:column}
+#connect{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+#codeIn{font:800 44px ui-monospace,Menlo,monospace;letter-spacing:12px;text-align:center;text-transform:uppercase;width:250px;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--txt);outline:none}
+#codeIn:focus{border-color:var(--acc)}
+#ctl{display:none;flex-direction:column;height:100%;padding-top:env(safe-area-inset-top)}
+#ctl.on{display:flex}
+header{display:flex;align-items:center;gap:8px;padding:8px 12px}
+#dot{width:10px;height:10px;border-radius:50%;background:var(--bad);flex:none}
+#dot.ok{background:var(--ok)}
+#codeLbl{font:600 13px ui-monospace,Menlo,monospace;color:var(--mute)}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:2px;margin-left:auto}
+.seg button{border:0;background:none;padding:7px 14px;border-radius:8px;cursor:pointer}
+.seg button.on{background:var(--acc);color:#fff}
+#stageWrap{padding:0 12px;display:flex;justify-content:center;flex:none}
+#stage{display:block;touch-action:none;border-radius:6px;background:#000;outline:1px solid var(--line)}
+#hint{font-size:12px;text-align:center;padding:5px 12px 0;color:var(--mute)}
+#panel{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 12px calc(24px + env(safe-area-inset-bottom))}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px}
+.sec h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--mute);font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row+.row{margin-top:8px}
+.grow{flex:1}
+.fxgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.fx{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:5px 3px 6px;cursor:pointer;font-size:12px;text-align:center}
+.fx i{display:block;height:26px;border-radius:6px;margin:0 auto 4px;width:88%}
+.fx.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer;flex:none}
+.sw.on{border-color:#fff}
+.swr{gap:6px;flex-wrap:nowrap}.swr .sw{width:26px;height:26px}
+input[type=color]{width:34px;height:34px;border:0;padding:0;background:none;border-radius:50%;flex:none}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+input[type=color]::-webkit-color-swatch{border-radius:50%;border:2px solid var(--line)}
+.lab{width:74px;font-size:13px;color:var(--mute);flex:none}
+input[type=range]{flex:1;accent-color:var(--acc);height:28px}
+.nud{display:grid;grid-template-columns:repeat(3,40px);gap:4px}
+.nud button{height:36px;padding:0}
+.nud .blank{visibility:hidden}
+#meter{height:6px;border-radius:3px;background:var(--panel2);flex:1;overflow:hidden}
+#meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#30d158,#ffd60a,#ff453a)}
+.scene{display:flex;align-items:center;gap:4px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:2px 2px 2px 10px}
+.scene button{background:none;border:0;padding:6px 8px;cursor:pointer}
+#sceneName{flex:1;min-width:0;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);font:inherit}
+.small{font-size:12px}
+@media (orientation:landscape) and (max-height:500px){
+  #ctl.on{flex-direction:row;flex-wrap:wrap}
+  header{width:100%}
+  #stageWrap{width:58%;align-items:flex-start}
+  #hint{display:none}
+  #panel{width:42%;height:calc(100% - 52px);flex:none}
+}
+</style>
+<script>
+/* ES5 safety net: show any error on screen so it can be photographed */
+window.onerror=function(msg,src,line){var b=document.getElementById('errbox');if(!b)return;b.style.display='block';b.appendChild(document.createTextNode('Error: '+msg+' (line '+line+')\n'));};
+</script>
+<style>#nojs{position:fixed;left:0;right:0;top:0;padding:18px;background:#5a1010;color:#fff;font:18px/1.4 sans-serif;z-index:99;text-align:center}
+#errbox{display:none;position:fixed;left:0;right:0;bottom:0;max-height:40%;overflow:auto;padding:12px;background:#300;color:#ffb4b4;font:14px/1.4 monospace;white-space:pre-wrap;z-index:99}</style>
+<script>/*******************************************************************************
+ * Copyright (c) 2013, 2016 IBM Corp.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
+ *
+ * The Eclipse Public License is available at
+ *    http://www.eclipse.org/legal/epl-v10.html
+ * and the Eclipse Distribution License is available at
+ *   http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ *******************************************************************************/
+(function(t,q){"object"===typeof exports&&"object"===typeof module?module.exports=q():"function"===typeof define&&define.amd?define(q):"object"===typeof exports?exports=q():t.Paho=q()})(this,function(){return function(t){function q(a,b,c){b[c++]=a>>8;b[c++]=a%256;return c}function r(a,b,c,k){k=q(b,c,k);E(a,c,k);return k+b}function n(a){for(var b=0,c=0;c<a.length;c++){var k=a.charCodeAt(c);2047<k?(55296<=k&&56319>=k&&(c++,b++),b+=3):127<k?b+=2:b++}return b}function E(a,b,c){for(var k=0;k<a.length;k++){var e=
+    a.charCodeAt(k);if(55296<=e&&56319>=e){var g=a.charCodeAt(++k);if(isNaN(g))throw Error(f(h.MALFORMED_UNICODE,[e,g]));e=(e-55296<<10)+(g-56320)+65536}127>=e?b[c++]=e:(2047>=e?b[c++]=e>>6&31|192:(65535>=e?b[c++]=e>>12&15|224:(b[c++]=e>>18&7|240,b[c++]=e>>12&63|128),b[c++]=e>>6&63|128),b[c++]=e&63|128)}return b}function F(a,b,c){for(var k="",e,g=b;g<b+c;){e=a[g++];if(!(128>e)){var m=a[g++]-128;if(0>m)throw Error(f(h.MALFORMED_UTF,[e.toString(16),m.toString(16),""]));if(224>e)e=64*(e-192)+m;else{var d=
+    a[g++]-128;if(0>d)throw Error(f(h.MALFORMED_UTF,[e.toString(16),m.toString(16),d.toString(16)]));if(240>e)e=4096*(e-224)+64*m+d;else{var l=a[g++]-128;if(0>l)throw Error(f(h.MALFORMED_UTF,[e.toString(16),m.toString(16),d.toString(16),l.toString(16)]));if(248>e)e=262144*(e-240)+4096*m+64*d+l;else throw Error(f(h.MALFORMED_UTF,[e.toString(16),m.toString(16),d.toString(16),l.toString(16)]));}}}65535<e&&(e-=65536,k+=String.fromCharCode(55296+(e>>10)),e=56320+(e&1023));k+=String.fromCharCode(e)}return k}
+    var s=t.localStorage||function(){var a={};return{setItem:function(b,c){a[b]=c},getItem:function(b){return a[b]},removeItem:function(b){delete a[b]}}}(),A=function(a,b){for(var c in a)if(a.hasOwnProperty(c))if(b.hasOwnProperty(c)){if(typeof a[c]!==b[c])throw Error(f(h.INVALID_TYPE,[typeof a[c],c]));}else{c="Unknown property, "+c+". Valid properties are:";for(var k in b)b.hasOwnProperty(k)&&(c=c+" "+k);throw Error(c);}},u=function(a,b){return function(){return a.apply(b,arguments)}},h={OK:{code:0,text:"AMQJSC0000I OK."},
+    CONNECT_TIMEOUT:{code:1,text:"AMQJSC0001E Connect timed out."},SUBSCRIBE_TIMEOUT:{code:2,text:"AMQJS0002E Subscribe timed out."},UNSUBSCRIBE_TIMEOUT:{code:3,text:"AMQJS0003E Unsubscribe timed out."},PING_TIMEOUT:{code:4,text:"AMQJS0004E Ping timed out."},INTERNAL_ERROR:{code:5,text:"AMQJS0005E Internal error. Error Message: {0}, Stack trace: {1}"},CONNACK_RETURNCODE:{code:6,text:"AMQJS0006E Bad Connack return code:{0} {1}."},SOCKET_ERROR:{code:7,text:"AMQJS0007E Socket error:{0}."},SOCKET_CLOSE:{code:8,
+    text:"AMQJS0008I Socket closed."},MALFORMED_UTF:{code:9,text:"AMQJS0009E Malformed UTF data:{0} {1} {2}."},UNSUPPORTED:{code:10,text:"AMQJS0010E {0} is not supported by this browser."},INVALID_STATE:{code:11,text:"AMQJS0011E Invalid state {0}."},INVALID_TYPE:{code:12,text:"AMQJS0012E Invalid type {0} for {1}."},INVALID_ARGUMENT:{code:13,text:"AMQJS0013E Invalid argument {0} for {1}."},UNSUPPORTED_OPERATION:{code:14,text:"AMQJS0014E Unsupported operation."},INVALID_STORED_DATA:{code:15,text:"AMQJS0015E Invalid data in local storage key\x3d{0} value\x3d{1}."},
+    INVALID_MQTT_MESSAGE_TYPE:{code:16,text:"AMQJS0016E Invalid MQTT message type {0}."},MALFORMED_UNICODE:{code:17,text:"AMQJS0017E Malformed Unicode string:{0} {1}."},BUFFER_FULL:{code:18,text:"AMQJS0018E Message buffer is full, maximum buffer size: {0}."}},H={0:"Connection Accepted",1:"Connection Refused: unacceptable protocol version",2:"Connection Refused: identifier rejected",3:"Connection Refused: server unavailable",4:"Connection Refused: bad user name or password",5:"Connection Refused: not authorized"},
+    f=function(a,b){var c=a.text;if(b)for(var k,e,g=0;g<b.length;g++)if(k="{"+g+"}",e=c.indexOf(k),0<e)var h=c.substring(0,e),c=c.substring(e+k.length),c=h+b[g]+c;return c},B=[0,6,77,81,73,115,100,112,3],C=[0,4,77,81,84,84,4],p=function(a,b){this.type=a;for(var c in b)b.hasOwnProperty(c)&&(this[c]=b[c])};p.prototype.encode=function(){var a=(this.type&15)<<4,b=0,c=[],k=0,e;void 0!==this.messageIdentifier&&(b+=2);switch(this.type){case 1:switch(this.mqttVersion){case 3:b+=B.length+3;break;case 4:b+=C.length+
+    3}b+=n(this.clientId)+2;void 0!==this.willMessage&&(b+=n(this.willMessage.destinationName)+2,e=this.willMessage.payloadBytes,e instanceof Uint8Array||(e=new Uint8Array(h)),b+=e.byteLength+2);void 0!==this.userName&&(b+=n(this.userName)+2);void 0!==this.password&&(b+=n(this.password)+2);break;case 8:for(var a=a|2,g=0;g<this.topics.length;g++)c[g]=n(this.topics[g]),b+=c[g]+2;b+=this.requestedQos.length;break;case 10:a|=2;for(g=0;g<this.topics.length;g++)c[g]=n(this.topics[g]),b+=c[g]+2;break;case 6:a|=
+    2;break;case 3:this.payloadMessage.duplicate&&(a|=8);a=a|=this.payloadMessage.qos<<1;this.payloadMessage.retained&&(a|=1);var k=n(this.payloadMessage.destinationName),h=this.payloadMessage.payloadBytes,b=b+(k+2)+h.byteLength;h instanceof ArrayBuffer?h=new Uint8Array(h):h instanceof Uint8Array||(h=new Uint8Array(h.buffer))}var f=b,g=Array(1),d=0;do{var z=f%128,f=f>>7;0<f&&(z|=128);g[d++]=z}while(0<f&&4>d);f=g.length+1;b=new ArrayBuffer(b+f);d=new Uint8Array(b);d[0]=a;d.set(g,1);if(3==this.type)f=r(this.payloadMessage.destinationName,
+    k,d,f);else if(1==this.type){switch(this.mqttVersion){case 3:d.set(B,f);f+=B.length;break;case 4:d.set(C,f),f+=C.length}a=0;this.cleanSession&&(a=2);void 0!==this.willMessage&&(a=a|4|this.willMessage.qos<<3,this.willMessage.retained&&(a|=32));void 0!==this.userName&&(a|=128);void 0!==this.password&&(a|=64);d[f++]=a;f=q(this.keepAliveInterval,d,f)}void 0!==this.messageIdentifier&&(f=q(this.messageIdentifier,d,f));switch(this.type){case 1:f=r(this.clientId,n(this.clientId),d,f);void 0!==this.willMessage&&
+    (f=r(this.willMessage.destinationName,n(this.willMessage.destinationName),d,f),f=q(e.byteLength,d,f),d.set(e,f),f+=e.byteLength);void 0!==this.userName&&(f=r(this.userName,n(this.userName),d,f));void 0!==this.password&&r(this.password,n(this.password),d,f);break;case 3:d.set(h,f);break;case 8:for(g=0;g<this.topics.length;g++)f=r(this.topics[g],c[g],d,f),d[f++]=this.requestedQos[g];break;case 10:for(g=0;g<this.topics.length;g++)f=r(this.topics[g],c[g],d,f)}return b};var G=function(a,b){this._client=
+    a;this._keepAliveInterval=1E3*b;this.isReset=!1;var c=(new p(12)).encode(),k=function(a){return function(){return e.apply(a)}},e=function(){this.isReset?(this.isReset=!1,this._client._trace("Pinger.doPing","send PINGREQ"),this._client.socket.send(c),this.timeout=setTimeout(k(this),this._keepAliveInterval)):(this._client._trace("Pinger.doPing","Timed out"),this._client._disconnected(h.PING_TIMEOUT.code,f(h.PING_TIMEOUT)))};this.reset=function(){this.isReset=!0;clearTimeout(this.timeout);0<this._keepAliveInterval&&
+    (this.timeout=setTimeout(k(this),this._keepAliveInterval))};this.cancel=function(){clearTimeout(this.timeout)}},v=function(a,b,c,f){b||(b=30);this.timeout=setTimeout(function(a,b,c){return function(){return a.apply(b,c)}}(c,a,f),1E3*b);this.cancel=function(){clearTimeout(this.timeout)}},d=function(a,b,c,d,e){if(!("WebSocket"in t&&null!==t.WebSocket))throw Error(f(h.UNSUPPORTED,["WebSocket"]));if(!("ArrayBuffer"in t&&null!==t.ArrayBuffer))throw Error(f(h.UNSUPPORTED,["ArrayBuffer"]));this._trace("Paho.Client",
+    a,b,c,d,e);this.host=b;this.port=c;this.path=d;this.uri=a;this.clientId=e;this._wsuri=null;this._localKey=b+":"+c+("/mqtt"!=d?":"+d:"")+":"+e+":";this._msg_queue=[];this._buffered_msg_queue=[];this._sentMessages={};this._receivedMessages={};this._notify_msg_sent={};this._message_identifier=1;this._sequence=0;for(var g in s)0!==g.indexOf("Sent:"+this._localKey)&&0!==g.indexOf("Received:"+this._localKey)||this.restore(g)};d.prototype.host=null;d.prototype.port=null;d.prototype.path=null;d.prototype.uri=
+    null;d.prototype.clientId=null;d.prototype.socket=null;d.prototype.connected=!1;d.prototype.maxMessageIdentifier=65536;d.prototype.connectOptions=null;d.prototype.hostIndex=null;d.prototype.onConnected=null;d.prototype.onConnectionLost=null;d.prototype.onMessageDelivered=null;d.prototype.onMessageArrived=null;d.prototype.traceFunction=null;d.prototype._msg_queue=null;d.prototype._buffered_msg_queue=null;d.prototype._connectTimeout=null;d.prototype.sendPinger=null;d.prototype.receivePinger=null;d.prototype._reconnectInterval=
+    1;d.prototype._reconnecting=!1;d.prototype._reconnectTimeout=null;d.prototype.disconnectedPublishing=!1;d.prototype.disconnectedBufferSize=5E3;d.prototype.receiveBuffer=null;d.prototype._traceBuffer=null;d.prototype._MAX_TRACE_ENTRIES=100;d.prototype.connect=function(a){var b=this._traceMask(a,"password");this._trace("Client.connect",b,this.socket,this.connected);if(this.connected)throw Error(f(h.INVALID_STATE,["already connected"]));if(this.socket)throw Error(f(h.INVALID_STATE,["already connected"]));
+    this._reconnecting&&(this._reconnectTimeout.cancel(),this._reconnectTimeout=null,this._reconnecting=!1);this.connectOptions=a;this._reconnectInterval=1;this._reconnecting=!1;a.uris?(this.hostIndex=0,this._doConnect(a.uris[0])):this._doConnect(this.uri)};d.prototype.subscribe=function(a,b){this._trace("Client.subscribe",a,b);if(!this.connected)throw Error(f(h.INVALID_STATE,["not connected"]));var c=new p(8);c.topics=a.constructor===Array?a:[a];void 0===b.qos&&(b.qos=0);c.requestedQos=[];for(var d=
+    0;d<c.topics.length;d++)c.requestedQos[d]=b.qos;b.onSuccess&&(c.onSuccess=function(a){b.onSuccess({invocationContext:b.invocationContext,grantedQos:a})});b.onFailure&&(c.onFailure=function(a){b.onFailure({invocationContext:b.invocationContext,errorCode:a,errorMessage:f(a)})});b.timeout&&(c.timeOut=new v(this,b.timeout,b.onFailure,[{invocationContext:b.invocationContext,errorCode:h.SUBSCRIBE_TIMEOUT.code,errorMessage:f(h.SUBSCRIBE_TIMEOUT)}]));this._requires_ack(c);this._schedule_message(c)};d.prototype.unsubscribe=
+    function(a,b){this._trace("Client.unsubscribe",a,b);if(!this.connected)throw Error(f(h.INVALID_STATE,["not connected"]));var c=new p(10);c.topics=a.constructor===Array?a:[a];b.onSuccess&&(c.callback=function(){b.onSuccess({invocationContext:b.invocationContext})});b.timeout&&(c.timeOut=new v(this,b.timeout,b.onFailure,[{invocationContext:b.invocationContext,errorCode:h.UNSUBSCRIBE_TIMEOUT.code,errorMessage:f(h.UNSUBSCRIBE_TIMEOUT)}]));this._requires_ack(c);this._schedule_message(c)};d.prototype.send=
+    function(a){this._trace("Client.send",a);var b=new p(3);b.payloadMessage=a;if(this.connected)0<a.qos?this._requires_ack(b):this.onMessageDelivered&&(this._notify_msg_sent[b]=this.onMessageDelivered(b.payloadMessage)),this._schedule_message(b);else if(this._reconnecting&&this.disconnectedPublishing){if(Object.keys(this._sentMessages).length+this._buffered_msg_queue.length>this.disconnectedBufferSize)throw Error(f(h.BUFFER_FULL,[this.disconnectedBufferSize]));0<a.qos?this._requires_ack(b):(b.sequence=
+    ++this._sequence,this._buffered_msg_queue.unshift(b))}else throw Error(f(h.INVALID_STATE,["not connected"]));};d.prototype.disconnect=function(){this._trace("Client.disconnect");this._reconnecting&&(this._reconnectTimeout.cancel(),this._reconnectTimeout=null,this._reconnecting=!1);if(!this.socket)throw Error(f(h.INVALID_STATE,["not connecting or connected"]));var a=new p(14);this._notify_msg_sent[a]=u(this._disconnected,this);this._schedule_message(a)};d.prototype.getTraceLog=function(){if(null!==
+    this._traceBuffer){this._trace("Client.getTraceLog",new Date);this._trace("Client.getTraceLog in flight messages",this._sentMessages.length);for(var a in this._sentMessages)this._trace("_sentMessages ",a,this._sentMessages[a]);for(a in this._receivedMessages)this._trace("_receivedMessages ",a,this._receivedMessages[a]);return this._traceBuffer}};d.prototype.startTrace=function(){null===this._traceBuffer&&(this._traceBuffer=[]);this._trace("Client.startTrace",new Date,"1.1.0-2018-11-22T11:35:36Z")};d.prototype.stopTrace=
+    function(){delete this._traceBuffer};d.prototype._doConnect=function(a){this.connectOptions.useSSL&&(a=a.split(":"),a[0]="wss",a=a.join(":"));this._wsuri=a;this.connected=!1;this.socket=4>this.connectOptions.mqttVersion?new WebSocket(a,["mqttv3.1"]):new WebSocket(a,["mqtt"]);this.socket.binaryType="arraybuffer";this.socket.onopen=u(this._on_socket_open,this);this.socket.onmessage=u(this._on_socket_message,this);this.socket.onerror=u(this._on_socket_error,this);this.socket.onclose=u(this._on_socket_close,
+    this);this.sendPinger=new G(this,this.connectOptions.keepAliveInterval);this.receivePinger=new G(this,this.connectOptions.keepAliveInterval);this._connectTimeout&&(this._connectTimeout.cancel(),this._connectTimeout=null);this._connectTimeout=new v(this,this.connectOptions.timeout,this._disconnected,[h.CONNECT_TIMEOUT.code,f(h.CONNECT_TIMEOUT)])};d.prototype._schedule_message=function(a){this._msg_queue.unshift(a);this.connected&&this._process_queue()};d.prototype.store=function(a,b){var c={type:b.type,
+    messageIdentifier:b.messageIdentifier,version:1};switch(b.type){case 3:b.pubRecReceived&&(c.pubRecReceived=!0);c.payloadMessage={};for(var d="",e=b.payloadMessage.payloadBytes,g=0;g<e.length;g++)d=15>=e[g]?d+"0"+e[g].toString(16):d+e[g].toString(16);c.payloadMessage.payloadHex=d;c.payloadMessage.qos=b.payloadMessage.qos;c.payloadMessage.destinationName=b.payloadMessage.destinationName;b.payloadMessage.duplicate&&(c.payloadMessage.duplicate=!0);b.payloadMessage.retained&&(c.payloadMessage.retained=
+    !0);0===a.indexOf("Sent:")&&(void 0===b.sequence&&(b.sequence=++this._sequence),c.sequence=b.sequence);break;default:throw Error(f(h.INVALID_STORED_DATA,[a+this._localKey+b.messageIdentifier,c]));}s.setItem(a+this._localKey+b.messageIdentifier,JSON.stringify(c))};d.prototype.restore=function(a){var b=s.getItem(a),c=JSON.parse(b),d=new p(c.type,c);switch(c.type){case 3:for(var b=c.payloadMessage.payloadHex,e=new ArrayBuffer(b.length/2),e=new Uint8Array(e),g=0;2<=b.length;){var m=parseInt(b.substring(0,
+    2),16),b=b.substring(2,b.length);e[g++]=m}b=new w(e);b.qos=c.payloadMessage.qos;b.destinationName=c.payloadMessage.destinationName;c.payloadMessage.duplicate&&(b.duplicate=!0);c.payloadMessage.retained&&(b.retained=!0);d.payloadMessage=b;break;default:throw Error(f(h.INVALID_STORED_DATA,[a,b]));}0===a.indexOf("Sent:"+this._localKey)?(d.payloadMessage.duplicate=!0,this._sentMessages[d.messageIdentifier]=d):0===a.indexOf("Received:"+this._localKey)&&(this._receivedMessages[d.messageIdentifier]=d)};
+    d.prototype._process_queue=function(){for(var a=null;a=this._msg_queue.pop();)this._socket_send(a),this._notify_msg_sent[a]&&(this._notify_msg_sent[a](),delete this._notify_msg_sent[a])};d.prototype._requires_ack=function(a){var b=Object.keys(this._sentMessages).length;if(b>this.maxMessageIdentifier)throw Error("Too many messages:"+b);for(;void 0!==this._sentMessages[this._message_identifier];)this._message_identifier++;a.messageIdentifier=this._message_identifier;this._sentMessages[a.messageIdentifier]=
+    a;3===a.type&&this.store("Sent:",a);this._message_identifier===this.maxMessageIdentifier&&(this._message_identifier=1)};d.prototype._on_socket_open=function(){var a=new p(1,this.connectOptions);a.clientId=this.clientId;this._socket_send(a)};d.prototype._on_socket_message=function(a){this._trace("Client._on_socket_message",a.data);a=this._deframeMessages(a.data);for(var b=0;b<a.length;b+=1)this._handleMessage(a[b])};d.prototype._deframeMessages=function(a){a=new Uint8Array(a);var b=[];if(this.receiveBuffer){var c=
+    new Uint8Array(this.receiveBuffer.length+a.length);c.set(this.receiveBuffer);c.set(a,this.receiveBuffer.length);a=c;delete this.receiveBuffer}try{for(c=0;c<a.length;){var d;a:{var e=a,g=c,m=g,n=e[g],l=n>>4,z=n&15,g=g+1,x=void 0,D=0,q=1;do{if(g==e.length){d=[null,m];break a}x=e[g++];D+=(x&127)*q;q*=128}while(0!==(x&128));x=g+D;if(x>e.length)d=[null,m];else{var y=new p(l);switch(l){case 2:e[g++]&1&&(y.sessionPresent=!0);y.returnCode=e[g++];break;case 3:var m=z>>1&3,s=256*e[g]+e[g+1],g=g+2,t=F(e,g,s),
+    g=g+s;0<m&&(y.messageIdentifier=256*e[g]+e[g+1],g+=2);var r=new w(e.subarray(g,x));1==(z&1)&&(r.retained=!0);8==(z&8)&&(r.duplicate=!0);r.qos=m;r.destinationName=t;y.payloadMessage=r;break;case 4:case 5:case 6:case 7:case 11:y.messageIdentifier=256*e[g]+e[g+1];break;case 9:y.messageIdentifier=256*e[g]+e[g+1],g+=2,y.returnCode=e.subarray(g,x)}d=[y,x]}}var u=d[0],c=d[1];if(null!==u)b.push(u);else break}c<a.length&&(this.receiveBuffer=a.subarray(c))}catch(v){d="undefined"==v.hasOwnProperty("stack")?
+    v.stack.toString():"No Error Stack Available";this._disconnected(h.INTERNAL_ERROR.code,f(h.INTERNAL_ERROR,[v.message,d]));return}return b};d.prototype._handleMessage=function(a){this._trace("Client._handleMessage",a);try{switch(a.type){case 2:this._connectTimeout.cancel();this._reconnectTimeout&&this._reconnectTimeout.cancel();if(this.connectOptions.cleanSession){for(var b in this._sentMessages){var c=this._sentMessages[b];s.removeItem("Sent:"+this._localKey+c.messageIdentifier)}this._sentMessages=
+    {};for(b in this._receivedMessages){var d=this._receivedMessages[b];s.removeItem("Received:"+this._localKey+d.messageIdentifier)}this._receivedMessages={}}if(0===a.returnCode)this.connected=!0,this.connectOptions.uris&&(this.hostIndex=this.connectOptions.uris.length);else{this._disconnected(h.CONNACK_RETURNCODE.code,f(h.CONNACK_RETURNCODE,[a.returnCode,H[a.returnCode]]));break}a=[];for(var e in this._sentMessages)this._sentMessages.hasOwnProperty(e)&&a.push(this._sentMessages[e]);if(0<this._buffered_msg_queue.length)for(e=
+    null;e=this._buffered_msg_queue.pop();)a.push(e),this.onMessageDelivered&&(this._notify_msg_sent[e]=this.onMessageDelivered(e.payloadMessage));a=a.sort(function(a,b){return a.sequence-b.sequence});e=0;for(var g=a.length;e<g;e++)if(c=a[e],3==c.type&&c.pubRecReceived){var m=new p(6,{messageIdentifier:c.messageIdentifier});this._schedule_message(m)}else this._schedule_message(c);if(this.connectOptions.onSuccess)this.connectOptions.onSuccess({invocationContext:this.connectOptions.invocationContext});
+    c=!1;this._reconnecting&&(c=!0,this._reconnectInterval=1,this._reconnecting=!1);this._connected(c,this._wsuri);this._process_queue();break;case 3:this._receivePublish(a);break;case 4:if(c=this._sentMessages[a.messageIdentifier])if(delete this._sentMessages[a.messageIdentifier],s.removeItem("Sent:"+this._localKey+a.messageIdentifier),this.onMessageDelivered)this.onMessageDelivered(c.payloadMessage);break;case 5:if(c=this._sentMessages[a.messageIdentifier])c.pubRecReceived=!0,m=new p(6,{messageIdentifier:a.messageIdentifier}),
+    this.store("Sent:",c),this._schedule_message(m);break;case 6:d=this._receivedMessages[a.messageIdentifier];s.removeItem("Received:"+this._localKey+a.messageIdentifier);d&&(this._receiveMessage(d),delete this._receivedMessages[a.messageIdentifier]);var n=new p(7,{messageIdentifier:a.messageIdentifier});this._schedule_message(n);break;case 7:c=this._sentMessages[a.messageIdentifier];delete this._sentMessages[a.messageIdentifier];s.removeItem("Sent:"+this._localKey+a.messageIdentifier);if(this.onMessageDelivered)this.onMessageDelivered(c.payloadMessage);
+    break;case 9:if(c=this._sentMessages[a.messageIdentifier]){c.timeOut&&c.timeOut.cancel();if(128===a.returnCode[0]){if(c.onFailure)c.onFailure(a.returnCode)}else if(c.onSuccess)c.onSuccess(a.returnCode);delete this._sentMessages[a.messageIdentifier]}break;case 11:if(c=this._sentMessages[a.messageIdentifier])c.timeOut&&c.timeOut.cancel(),c.callback&&c.callback(),delete this._sentMessages[a.messageIdentifier];break;case 13:this.sendPinger.reset();break;case 14:this._disconnected(h.INVALID_MQTT_MESSAGE_TYPE.code,
+    f(h.INVALID_MQTT_MESSAGE_TYPE,[a.type]));break;default:this._disconnected(h.INVALID_MQTT_MESSAGE_TYPE.code,f(h.INVALID_MQTT_MESSAGE_TYPE,[a.type]))}}catch(l){c="undefined"==l.hasOwnProperty("stack")?l.stack.toString():"No Error Stack Available",this._disconnected(h.INTERNAL_ERROR.code,f(h.INTERNAL_ERROR,[l.message,c]))}};d.prototype._on_socket_error=function(a){this._reconnecting||this._disconnected(h.SOCKET_ERROR.code,f(h.SOCKET_ERROR,[a.data]))};d.prototype._on_socket_close=function(){this._reconnecting||
+    this._disconnected(h.SOCKET_CLOSE.code,f(h.SOCKET_CLOSE))};d.prototype._socket_send=function(a){if(1==a.type){var b=this._traceMask(a,"password");this._trace("Client._socket_send",b)}else this._trace("Client._socket_send",a);this.socket.send(a.encode());this.sendPinger.reset()};d.prototype._receivePublish=function(a){switch(a.payloadMessage.qos){case "undefined":case 0:this._receiveMessage(a);break;case 1:var b=new p(4,{messageIdentifier:a.messageIdentifier});this._schedule_message(b);this._receiveMessage(a);
+    break;case 2:this._receivedMessages[a.messageIdentifier]=a;this.store("Received:",a);a=new p(5,{messageIdentifier:a.messageIdentifier});this._schedule_message(a);break;default:throw Error("Invaild qos\x3d"+a.payloadMessage.qos);}};d.prototype._receiveMessage=function(a){if(this.onMessageArrived)this.onMessageArrived(a.payloadMessage)};d.prototype._connected=function(a,b){if(this.onConnected)this.onConnected(a,b)};d.prototype._reconnect=function(){this._trace("Client._reconnect");this.connected||(this._reconnecting=
+    !0,this.sendPinger.cancel(),this.receivePinger.cancel(),128>this._reconnectInterval&&(this._reconnectInterval*=2),this.connectOptions.uris?(this.hostIndex=0,this._doConnect(this.connectOptions.uris[0])):this._doConnect(this.uri))};d.prototype._disconnected=function(a,b){this._trace("Client._disconnected",a,b);if(void 0!==a&&this._reconnecting)this._reconnectTimeout=new v(this,this._reconnectInterval,this._reconnect);else if(this.sendPinger.cancel(),this.receivePinger.cancel(),this._connectTimeout&&
+    (this._connectTimeout.cancel(),this._connectTimeout=null),this._msg_queue=[],this._buffered_msg_queue=[],this._notify_msg_sent={},this.socket&&(this.socket.onopen=null,this.socket.onmessage=null,this.socket.onerror=null,this.socket.onclose=null,1===this.socket.readyState&&this.socket.close(),delete this.socket),this.connectOptions.uris&&this.hostIndex<this.connectOptions.uris.length-1)this.hostIndex++,this._doConnect(this.connectOptions.uris[this.hostIndex]);else if(void 0===a&&(a=h.OK.code,b=f(h.OK)),
+    this.connected){this.connected=!1;if(this.onConnectionLost)this.onConnectionLost({errorCode:a,errorMessage:b,reconnect:this.connectOptions.reconnect,uri:this._wsuri});a!==h.OK.code&&this.connectOptions.reconnect&&(this._reconnectInterval=1,this._reconnect())}else if(4===this.connectOptions.mqttVersion&&!1===this.connectOptions.mqttVersionExplicit)this._trace("Failed to connect V4, dropping back to V3"),this.connectOptions.mqttVersion=3,this.connectOptions.uris?(this.hostIndex=0,this._doConnect(this.connectOptions.uris[0])):
+    this._doConnect(this.uri);else if(this.connectOptions.onFailure)this.connectOptions.onFailure({invocationContext:this.connectOptions.invocationContext,errorCode:a,errorMessage:b})};d.prototype._trace=function(){if(this.traceFunction){var a=Array.prototype.slice.call(arguments),b;for(b in a)"undefined"!==typeof a[b]&&a.splice(b,1,JSON.stringify(a[b]));b=a.join("");this.traceFunction({severity:"Debug",message:b})}if(null!==this._traceBuffer)for(b=0,a=arguments.length;b<a;b++)this._traceBuffer.length==
+    this._MAX_TRACE_ENTRIES&&this._traceBuffer.shift(),0===b?this._traceBuffer.push(arguments[b]):"undefined"===typeof arguments[b]?this._traceBuffer.push(arguments[b]):this._traceBuffer.push("  "+JSON.stringify(arguments[b]))};d.prototype._traceMask=function(a,b){var c={},d;for(d in a)a.hasOwnProperty(d)&&(c[d]=d==b?"******":a[d]);return c};var w=function(a){var b;if("string"===typeof a||a instanceof ArrayBuffer||ArrayBuffer.isView(a)&&!(a instanceof DataView))b=a;else throw f(h.INVALID_ARGUMENT,[a,
+    "newPayload"]);var c,d=0,e=!1,g=!1;Object.defineProperties(this,{payloadString:{enumerable:!0,get:function(){return"string"===typeof b?b:F(b,0,b.length)}},payloadBytes:{enumerable:!0,get:function(){if("string"===typeof b){var a=new ArrayBuffer(n(b)),a=new Uint8Array(a);E(b,a,0);return a}return b}},destinationName:{enumerable:!0,get:function(){return c},set:function(a){if("string"===typeof a)c=a;else throw Error(f(h.INVALID_ARGUMENT,[a,"newDestinationName"]));}},qos:{enumerable:!0,get:function(){return d},
+    set:function(a){if(0===a||1===a||2===a)d=a;else throw Error("Invalid argument:"+a);}},retained:{enumerable:!0,get:function(){return e},set:function(a){if("boolean"===typeof a)e=a;else throw Error(f(h.INVALID_ARGUMENT,[a,"newRetained"]));}},topic:{enumerable:!0,get:function(){return c},set:function(a){c=a}},duplicate:{enumerable:!0,get:function(){return g},set:function(a){g=a}}})};return{Client:function(a,b,c,k){var e;if("string"!==typeof a)throw Error(f(h.INVALID_TYPE,[typeof a,"host"]));if(2==arguments.length){k=
+    b;e=a;var g=e.match(/^(wss?):\/\/((\[(.+)\])|([^\/]+?))(:(\d+))?(\/.*)$/);if(g)a=g[4]||g[2],b=parseInt(g[7]),c=g[8];else throw Error(f(h.INVALID_ARGUMENT,[a,"host"]));}else{3==arguments.length&&(k=c,c="/mqtt");if("number"!==typeof b||0>b)throw Error(f(h.INVALID_TYPE,[typeof b,"port"]));if("string"!==typeof c)throw Error(f(h.INVALID_TYPE,[typeof c,"path"]));e="ws://"+(-1!==a.indexOf(":")&&"["!==a.slice(0,1)&&"]"!==a.slice(-1)?"["+a+"]":a)+":"+b+c}for(var m=g=0;m<k.length;m++){var n=k.charCodeAt(m);
+    55296<=n&&56319>=n&&m++;g++}if("string"!==typeof k||65535<g)throw Error(f(h.INVALID_ARGUMENT,[k,"clientId"]));var l=new d(e,a,b,c,k);Object.defineProperties(this,{host:{get:function(){return a},set:function(){throw Error(f(h.UNSUPPORTED_OPERATION));}},port:{get:function(){return b},set:function(){throw Error(f(h.UNSUPPORTED_OPERATION));}},path:{get:function(){return c},set:function(){throw Error(f(h.UNSUPPORTED_OPERATION));}},uri:{get:function(){return e},set:function(){throw Error(f(h.UNSUPPORTED_OPERATION));
+    }},clientId:{get:function(){return l.clientId},set:function(){throw Error(f(h.UNSUPPORTED_OPERATION));}},onConnected:{get:function(){return l.onConnected},set:function(a){if("function"===typeof a)l.onConnected=a;else throw Error(f(h.INVALID_TYPE,[typeof a,"onConnected"]));}},disconnectedPublishing:{get:function(){return l.disconnectedPublishing},set:function(a){l.disconnectedPublishing=a}},disconnectedBufferSize:{get:function(){return l.disconnectedBufferSize},set:function(a){l.disconnectedBufferSize=
+    a}},onConnectionLost:{get:function(){return l.onConnectionLost},set:function(a){if("function"===typeof a)l.onConnectionLost=a;else throw Error(f(h.INVALID_TYPE,[typeof a,"onConnectionLost"]));}},onMessageDelivered:{get:function(){return l.onMessageDelivered},set:function(a){if("function"===typeof a)l.onMessageDelivered=a;else throw Error(f(h.INVALID_TYPE,[typeof a,"onMessageDelivered"]));}},onMessageArrived:{get:function(){return l.onMessageArrived},set:function(a){if("function"===typeof a)l.onMessageArrived=
+    a;else throw Error(f(h.INVALID_TYPE,[typeof a,"onMessageArrived"]));}},trace:{get:function(){return l.traceFunction},set:function(a){if("function"===typeof a)l.traceFunction=a;else throw Error(f(h.INVALID_TYPE,[typeof a,"onTrace"]));}}});this.connect=function(a){a=a||{};A(a,{timeout:"number",userName:"string",password:"string",willMessage:"object",keepAliveInterval:"number",cleanSession:"boolean",useSSL:"boolean",invocationContext:"object",onSuccess:"function",onFailure:"function",hosts:"object",
+    ports:"object",reconnect:"boolean",mqttVersion:"number",mqttVersionExplicit:"boolean",uris:"object"});void 0===a.keepAliveInterval&&(a.keepAliveInterval=60);if(4<a.mqttVersion||3>a.mqttVersion)throw Error(f(h.INVALID_ARGUMENT,[a.mqttVersion,"connectOptions.mqttVersion"]));void 0===a.mqttVersion?(a.mqttVersionExplicit=!1,a.mqttVersion=4):a.mqttVersionExplicit=!0;if(void 0!==a.password&&void 0===a.userName)throw Error(f(h.INVALID_ARGUMENT,[a.password,"connectOptions.password"]));if(a.willMessage){if(!(a.willMessage instanceof
+    w))throw Error(f(h.INVALID_TYPE,[a.willMessage,"connectOptions.willMessage"]));a.willMessage.stringPayload=null;if("undefined"===typeof a.willMessage.destinationName)throw Error(f(h.INVALID_TYPE,[typeof a.willMessage.destinationName,"connectOptions.willMessage.destinationName"]));}"undefined"===typeof a.cleanSession&&(a.cleanSession=!0);if(a.hosts){if(!(a.hosts instanceof Array))throw Error(f(h.INVALID_ARGUMENT,[a.hosts,"connectOptions.hosts"]));if(1>a.hosts.length)throw Error(f(h.INVALID_ARGUMENT,
+    [a.hosts,"connectOptions.hosts"]));for(var b=!1,d=0;d<a.hosts.length;d++){if("string"!==typeof a.hosts[d])throw Error(f(h.INVALID_TYPE,[typeof a.hosts[d],"connectOptions.hosts["+d+"]"]));if(/^(wss?):\/\/((\[(.+)\])|([^\/]+?))(:(\d+))?(\/.*)$/.test(a.hosts[d]))if(0===d)b=!0;else{if(!b)throw Error(f(h.INVALID_ARGUMENT,[a.hosts[d],"connectOptions.hosts["+d+"]"]));}else if(b)throw Error(f(h.INVALID_ARGUMENT,[a.hosts[d],"connectOptions.hosts["+d+"]"]));}if(b)a.uris=a.hosts;else{if(!a.ports)throw Error(f(h.INVALID_ARGUMENT,
+    [a.ports,"connectOptions.ports"]));if(!(a.ports instanceof Array))throw Error(f(h.INVALID_ARGUMENT,[a.ports,"connectOptions.ports"]));if(a.hosts.length!==a.ports.length)throw Error(f(h.INVALID_ARGUMENT,[a.ports,"connectOptions.ports"]));a.uris=[];for(d=0;d<a.hosts.length;d++){if("number"!==typeof a.ports[d]||0>a.ports[d])throw Error(f(h.INVALID_TYPE,[typeof a.ports[d],"connectOptions.ports["+d+"]"]));var b=a.hosts[d],g=a.ports[d];e="ws://"+(-1!==b.indexOf(":")?"["+b+"]":b)+":"+g+c;a.uris.push(e)}}}l.connect(a)};
+    this.subscribe=function(a,b){if("string"!==typeof a&&a.constructor!==Array)throw Error("Invalid argument:"+a);b=b||{};A(b,{qos:"number",invocationContext:"object",onSuccess:"function",onFailure:"function",timeout:"number"});if(b.timeout&&!b.onFailure)throw Error("subscribeOptions.timeout specified with no onFailure callback.");if("undefined"!==typeof b.qos&&0!==b.qos&&1!==b.qos&&2!==b.qos)throw Error(f(h.INVALID_ARGUMENT,[b.qos,"subscribeOptions.qos"]));l.subscribe(a,b)};this.unsubscribe=function(a,
+    b){if("string"!==typeof a&&a.constructor!==Array)throw Error("Invalid argument:"+a);b=b||{};A(b,{invocationContext:"object",onSuccess:"function",onFailure:"function",timeout:"number"});if(b.timeout&&!b.onFailure)throw Error("unsubscribeOptions.timeout specified with no onFailure callback.");l.unsubscribe(a,b)};this.send=function(a,b,c,d){var e;if(0===arguments.length)throw Error("Invalid argument.length");if(1==arguments.length){if(!(a instanceof w)&&"string"!==typeof a)throw Error("Invalid argument:"+
+    typeof a);e=a;if("undefined"===typeof e.destinationName)throw Error(f(h.INVALID_ARGUMENT,[e.destinationName,"Message.destinationName"]));}else e=new w(b),e.destinationName=a,3<=arguments.length&&(e.qos=c),4<=arguments.length&&(e.retained=d);l.send(e)};this.publish=function(a,b,c,d){var e;if(0===arguments.length)throw Error("Invalid argument.length");if(1==arguments.length){if(!(a instanceof w)&&"string"!==typeof a)throw Error("Invalid argument:"+typeof a);e=a;if("undefined"===typeof e.destinationName)throw Error(f(h.INVALID_ARGUMENT,
+    [e.destinationName,"Message.destinationName"]));}else e=new w(b),e.destinationName=a,3<=arguments.length&&(e.qos=c),4<=arguments.length&&(e.retained=d);l.send(e)};this.disconnect=function(){l.disconnect()};this.getTraceLog=function(){return l.getTraceLog()};this.startTrace=function(){l.startTrace()};this.stopTrace=function(){l.stopTrace()};this.isConnected=function(){return l.connected}},Message:w}}("undefined"!==typeof global?global:"undefined"!==typeof self?self:"undefined"!==typeof window?window:
+    {})});</script>
+</head>
+<body>
+<div id="nojs">JavaScript isn't running here. This viewer can't run Glowmap. Open the page in Chrome instead (see the setup steps).</div>
+<div id="errbox"></div>
+
+<!-- HOME -->
+<div id="home" class="view on">
+  <h1><span>Glowmap</span></h1>
+  <div class="mute">Projection mapping, the easy way. Open this page on both devices.</div>
+  <div class="roles">
+    <div class="role" data-go="projector"><div class="ic">📽️</div><b>This is the projector</b><span class="mute">Shows the light. Open this on the projector's browser.</span></div>
+    <div class="role" data-go="remote"><div class="ic">📱</div><b>This is the remote</b><span class="mute">Map shapes and pick effects from your phone.</span></div>
+  </div>
+  <div class="mute small">Tip: bookmark <b>#projector</b> on the projector and <b>#remote</b> on your phone to skip this screen.</div>
+</div>
+
+<!-- PROJECTOR -->
+<div id="proj" class="view">
+  <canvas id="gl"></canvas>
+  <canvas id="ov"></canvas>
+  <div id="ptag"></div>
+  <div id="pinfo">
+    <div class="mute">Pairing code</div>
+    <div class="code" id="pcode">····</div>
+    <div id="pstat" class="mute">Getting a code…</div>
+    <div class="mute small" style="margin-top:10px">On your iPhone, open this same page, tap <b>Remote</b> and enter the code.</div>
+    <div class="row">
+      <button class="btn" id="fsBtn">Fullscreen</button>
+      <button class="btn" id="newCode">New code</button>
+    </div>
+  </div>
+</div>
+
+<!-- REMOTE -->
+<div id="remote" class="view">
+  <div id="connect">
+    <div style="font-size:42px">📱</div>
+    <h2 style="margin:0">Connect to projector</h2>
+    <div class="mute">Enter the code shown on the wall.</div>
+    <input id="codeIn" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="····">
+    <button class="btn big on" id="connBtn">Connect</button>
+    <div id="connMsg" class="mute"></div>
+  </div>
+
+  <div id="ctl">
+    <header>
+      <span id="dot"></span><span id="codeLbl"></span>
+      <div class="seg" id="modeSeg"><button data-mode="map">Map</button><button data-mode="show">Show</button></div>
+      <button class="btn blk" id="blkBtn">Blackout</button>
+    </header>
+    <div id="stageWrap"><canvas id="stage"></canvas></div>
+    <div id="hint">Drag corners onto your objects · drag inside to move · two fingers to resize/rotate</div>
+    <div id="panel">
+
+      <div class="sec">
+        <h3>Add a shape</h3>
+        <div class="row">
+          <button class="btn grow" data-add="rect">▭ Rectangle</button>
+          <button class="btn grow" data-add="tri">△ Triangle</button>
+          <button class="btn grow" data-add="circle">◯ Circle</button>
+          <button class="btn grow" data-add="hex">⬡ Polygon</button>
+        </div>
+      </div>
+
+      <div id="noSel" class="sec mute small" style="text-align:center">Tap a shape to edit it.</div>
+
+      <div id="selBox">
+        <div class="sec">
+          <h3>Shape</h3>
+          <div class="row" style="align-items:flex-start;flex-wrap:nowrap">
+            <div class="row grow" style="align-content:flex-start">
+              <button class="btn" id="dupBtn">Duplicate</button>
+              <button class="btn" id="frontBtn">To front</button>
+              <button class="btn" id="addPt">+ Corner</button>
+              <button class="btn" id="delPt">− Corner</button>
+              <button class="btn" id="fineBtn">Fine drag</button>
+              <button class="btn danger" id="delBtn">Delete</button>
+            </div>
+            <div class="nud">
+              <button class="btn blank"></button><button class="btn" data-n="0,-1">▲</button><button class="btn blank"></button>
+              <button class="btn" data-n="-1,0">◀</button><button class="btn" data-n="0,1">▼</button><button class="btn" data-n="1,0">▶</button>
+            </div>
+          </div>
+          <div class="mute small" id="nudLbl" style="margin-top:6px">Arrows nudge the whole shape. Tap a corner to nudge just that corner.</div>
+        </div>
+
+        <div class="sec">
+          <h3>Effect</h3>
+          <div class="fxgrid" id="fxGrid"></div>
+          <div class="row" id="imgRow" style="margin-top:10px">
+            <label class="btn grow" style="text-align:center">🖼️ Choose image<input type="file" id="imgIn" accept="image/*" hidden></label>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h3>Look</h3>
+          <div class="row"><span class="lab" style="width:16px">A</span><div class="row grow swr" id="swA"></div><input type="color" id="c1"></div>
+          <div class="row"><span class="lab" style="width:16px">B</span><div class="row grow swr" id="swB"></div><input type="color" id="c2"></div>
+          <div class="row"><span class="lab">Brightness</span><input type="range" id="sBright" min="0" max="1" step="0.01"></div>
+          <div class="row"><span class="lab">Speed</span><input type="range" id="sSpeed" min="0" max="3" step="0.01"></div>
+          <div class="row"><span class="lab">Soft edge</span><input type="range" id="sFeather" min="0" max="0.06" step="0.001"></div>
+          <div class="row"><button class="btn grow" id="audBtn">🎵 React to music</button><button class="btn grow" id="allBtn">Copy look to all shapes</button></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3>Everything</h3>
+        <div class="row"><span class="lab">Master</span><input type="range" id="mBright" min="0" max="1" step="0.01"></div>
+        <div class="row"><span class="lab">Speed</span><input type="range" id="mSpeed" min="0" max="3" step="0.01"></div>
+        <div class="row"><button class="btn grow" id="gridBtn">Grid on wall</button><button class="btn grow" id="micBtn">🎤 Listen to music</button></div>
+        <div class="row" id="meterRow" style="display:none"><span class="lab">Level</span><div id="meter"><i></i></div></div>
+      </div>
+
+      <div class="sec">
+        <h3>Scenes</h3>
+        <div class="row"><input id="sceneName" placeholder="Scene name"><button class="btn on" id="saveScene">Save</button></div>
+        <div class="row" id="sceneList" style="margin-top:8px"></div>
+        <div class="mute small" id="sceneMsg" style="margin-top:6px"></div>
+      </div>
+
+      <div class="sec">
+        <div class="row"><button class="btn grow" id="clearAll">Clear all shapes</button><button class="btn grow" id="changeCode">Change projector</button></div>
+        <div class="row" id="clearConfirm" style="display:none"><span class="grow small">Remove every shape?</span><button class="btn danger" id="clearYes">Yes, clear</button><button class="btn" id="clearNo">Cancel</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+var __async = (__this, __arguments, generator) => {
+  return new Promise((resolve, reject) => {
+    var fulfilled = (value) => {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    var rejected = (value) => {
+      try {
+        step(generator.throw(value));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
+    step((generator = generator.apply(__this, __arguments)).next());
+  });
+};
+{
+  const nj = document.getElementById("nojs");
+  if (nj) nj.style.display = "none";
+}
+const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
+const LS = {
+  get(k, d) {
+    try {
+      const v = localStorage.getItem(k);
+      return v ? JSON.parse(v) : d;
+    } catch (e) {
+      return d;
+    }
+  },
+  set(k, v) {
+    try {
+      localStorage.setItem(k, JSON.stringify(v));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+};
+const BROKERS = [
+  { host: "broker.emqx.io", port: 8084, path: "/mqtt", ssl: true },
+  { host: "broker.hivemq.com", port: 8884, path: "/mqtt", ssl: true }
+];
+const TOPIC = "glowmap-k7q2/";
+function makeBus(code, opts) {
+  let i = 0, client = null, up = false, closed = false, retryT = null;
+  const base = TOPIC + code + "/";
+  function connect() {
+    if (closed) return;
+    const b = LS.get("gm_broker", null) || BROKERS[i % BROKERS.length];
+    try {
+      client = new Paho.Client(b.host, b.port, b.path, "gm" + Math.random().toString(36).slice(2, 12));
+    } catch (e) {
+      opts.onDown && opts.onDown();
+      return;
+    }
+    client.onMessageArrived = (m) => {
+      if (m.destinationName.indexOf(base) !== 0) return;
+      let p;
+      try {
+        p = JSON.parse(m.payloadString);
+      } catch (e) {
+        return;
+      }
+      opts.onMsg(m.destinationName.slice(base.length), p);
+    };
+    client.onConnectionLost = () => {
+      up = false;
+      if (closed) return;
+      opts.onDown && opts.onDown();
+      retryT = setTimeout(connect, 2e3);
+    };
+    const o = {
+      useSSL: !!b.ssl,
+      timeout: 8,
+      keepAliveInterval: 20,
+      cleanSession: true,
+      onSuccess: () => {
+        up = true;
+        opts.subs.forEach((s) => client.subscribe(base + s, { qos: 0 }));
+        opts.onUp && opts.onUp();
+      },
+      onFailure: () => {
+        up = false;
+        i++;
+        if (closed) return;
+        opts.onDown && opts.onDown();
+        retryT = setTimeout(connect, 1500);
+      }
+    };
+    if (opts.will) {
+      const w = new Paho.Message(JSON.stringify(opts.will.v));
+      w.destinationName = base + opts.will.t;
+      w.retained = true;
+      o.willMessage = w;
+    }
+    try {
+      client.connect(o);
+    } catch (e) {
+      retryT = setTimeout(connect, 2e3);
+    }
+  }
+  connect();
+  return {
+    get up() {
+      return up;
+    },
+    pub(t, v, retained) {
+      if (!up) return false;
+      try {
+        const m = new Paho.Message(JSON.stringify(v));
+        m.destinationName = base + t;
+        m.retained = !!retained;
+        m.qos = 0;
+        client.send(m);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    close() {
+      closed = true;
+      clearTimeout(retryT);
+      try {
+        if (up) client.disconnect();
+      } catch (e) {
+      }
+      up = false;
+    }
+  };
+}
+const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const genCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const FX = [
+  { k: "solid", n: "Solid", g: "c1" },
+  { k: "flow", n: "Flow", g: "c12" },
+  { k: "rainbow", n: "Rainbow", g: "rb" },
+  { k: "pulse", n: "Pulse", g: "c1" },
+  { k: "strobe", n: "Strobe", g: "c1" },
+  { k: "stripes", n: "Stripes", g: "st" },
+  { k: "waves", n: "Waves", g: "c12" },
+  { k: "sparkle", n: "Sparkle", g: "c12" },
+  { k: "fire", n: "Fire", g: "c12" },
+  { k: "plasma", n: "Plasma", g: "rb" },
+  { k: "chase", n: "Chase", g: "c1" },
+  { k: "scanner", n: "Scanner", g: "c12" },
+  { k: "ripple", n: "Ripple", g: "c12" },
+  { k: "checker", n: "Checker", g: "st" },
+  { k: "image", n: "Image", g: "img" },
+  { k: "storm", n: "Storm", g: "c12" }
+];
+const fxIndex = (k) => Math.max(0, FX.findIndex((f) => f.k === k));
+const PALETTE = ["#ffffff", "#ff2d55", "#ff9500", "#ffd60a", "#30d158", "#00c7be", "#0a84ff", "#bf5af2"];
+function defaultState() {
+  return { shapes: [], mode: "map", master: 1, mspeed: 1, blackout: false, grid: false, sel: null, act: null };
+}
+function sq2quad(p) {
+  const [x0, y0] = p[0], [x1, y1] = p[1], [x2, y2] = p[2], [x3, y3] = p[3];
+  const sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3;
+  let a, b, c, d, e, f, g, h;
+  if (Math.abs(sx) < 1e-9 && Math.abs(sy) < 1e-9) {
+    a = x1 - x0;
+    b = x3 - x0;
+    c = x0;
+    d = y1 - y0;
+    e = y3 - y0;
+    f = y0;
+    g = 0;
+    h = 0;
+  } else {
+    const dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2, den = dx1 * dy2 - dx2 * dy1;
+    if (Math.abs(den) < 1e-12) return null;
+    g = (sx * dy2 - dx2 * sy) / den;
+    h = (dx1 * sy - sx * dy1) / den;
+    a = x1 - x0 + g * x1;
+    b = x3 - x0 + h * x3;
+    c = x0;
+    d = y1 - y0 + g * y1;
+    e = y3 - y0 + h * y3;
+    f = y0;
+  }
+  return [a, b, c, d, e, f, g, h, 1];
+}
+function inv3(m) {
+  const [a, b, c, d, e, f, g, h, i] = m;
+  const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g;
+  const det = a * A + b * B + c * C;
+  if (Math.abs(det) < 1e-12) return null;
+  const D = -(b * i - c * h), E = a * i - c * g, F = -(a * h - b * g), G = b * f - c * e, H = -(a * f - c * d), I = a * e - b * d;
+  return [A / det, D / det, G / det, B / det, E / det, H / det, C / det, F / det, I / det];
+}
+function applyM(M, u, v) {
+  const w = M[6] * u + M[7] * v + M[8];
+  return [(M[0] * u + M[1] * v + M[2]) / w, (M[3] * u + M[4] * v + M[5]) / w];
+}
+function bboxM(p) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const [x, y] of p) {
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x);
+    y1 = Math.max(y1, y);
+  }
+  return [Math.max(x1 - x0, 1e-4), 0, x0, 0, Math.max(y1 - y0, 1e-4), y0, 0, 0, 1];
+}
+function shapeM(s) {
+  const p = s.pts;
+  let M = null;
+  if (s.kind === "ellipse" || p.length === 4) M = sq2quad(p);
+  else if (p.length === 3) {
+    const r = [];
+    for (const k of [0, 1]) {
+      const v0 = p[0][k], v1 = p[1][k], v2 = p[2][k];
+      const A = v1 - v2, C = v0 - 0.5 * A, B = v2 - C;
+      r.push(A, B, C);
+    }
+    M = [r[0], r[1], r[2], r[3], r[4], r[5], 0, 0, 1];
+  }
+  if (!M || !inv3(M)) M = bboxM(p);
+  return M;
+}
+function outline(s) {
+  if (s.kind !== "ellipse") return s.pts;
+  const M = shapeM(s), o = [];
+  for (let k = 0; k < 64; k++) {
+    const a = k / 64 * Math.PI * 2;
+    o.push(applyM(M, 0.5 + 0.5 * Math.cos(a), 0.5 + 0.5 * Math.sin(a)));
+  }
+  return o;
+}
+function tracePath(x, s, W, H) {
+  const o = outline(s);
+  x.beginPath();
+  o.forEach((p, i) => i ? x.lineTo(p[0] * W, p[1] * H) : x.moveTo(p[0] * W, p[1] * H));
+  x.closePath();
+}
+function pointInPoly(px, py, o) {
+  let ins = false;
+  for (let i = 0, j = o.length - 1; i < o.length; j = i++) {
+    const [xi, yi] = o[i], [xj, yj] = o[j];
+    if (yi > py !== yj > py && px < (xj - xi) * (py - yi) / (yj - yi) + xi) ins = !ins;
+  }
+  return ins;
+}
+function show(id) {
+  $$(".view").forEach((v) => v.classList.toggle("on", v.id === id));
+}
+let started = null;
+function route() {
+  const h = location.hash.replace("#", "");
+  if (h === "projector") {
+    if (started !== "p") {
+      started = "p";
+      show("proj");
+      startProjector();
+    }
+  } else if (h === "remote") {
+    if (started !== "r") {
+      started = "r";
+      show("remote");
+      startRemote();
+    }
+  } else if (!started) show("home");
+}
+$$("[data-go]").forEach((b) => b.onclick = () => {
+  location.hash = b.dataset.go;
+});
+window.addEventListener("hashchange", () => {
+  if (started) location.reload();
+  else route();
+});
+function startProjector() {
+  const glc = $("#gl"), ov = $("#ov"), octx = ov.getContext("2d");
+  let state = Object.assign(defaultState(), LS.get("gm_p_state", {}));
+  state.act = null;
+  let imgs = LS.get("gm_p_imgs", {});
+  const texs = {};
+  const phases = {};
+  let aud = 0, audT = 0;
+  const gl = glc.getContext("webgl", { alpha: false, antialias: false, premultipliedAlpha: true }) || glc.getContext("experimental-webgl");
+  if (!gl) {
+    $("#pstat").textContent = "This browser has no WebGL, so effects can't render. Try Chrome on the projector.";
+    return;
+  }
+  const VS = "attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}";
+  const FS = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 uRes; uniform mat3 uH; uniform int uFx; uniform vec3 uC1; uniform vec3 uC2;
+uniform float uT; uniform float uB; uniform float uFeather; uniform float uAsp;
+uniform int uN; uniform vec2 uP[17]; uniform int uEl; uniform sampler2D uTex; uniform int uHasTex;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+ return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}
+float fbm(vec2 p){float v=0.0;float a=0.5;for(int i=0;i<5;i++){v+=a*noise(p);p*=2.0;a*=0.5;}return v;}
+vec3 hsv(float h,float s,float v){vec3 k=clamp(abs(mod(h*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0,0.0,1.0);return v*mix(vec3(1.0),k,s);}
+vec3 effect(vec2 uv,float t){
+ if(uFx==0) return uC1;
+ if(uFx==1){float g=0.5+0.5*sin((uv.x+uv.y*0.4)*4.0-t*2.0);return mix(uC1,uC2,g);}
+ if(uFx==2) return hsv(fract(uv.x*0.7+uv.y*0.25-t*0.15),1.0,1.0);
+ if(uFx==3) return uC1*(0.06+0.94*pow(0.5+0.5*sin(t*3.0),2.0));
+ if(uFx==4) return fract(t*3.0)<0.3?uC1:vec3(0.0);
+ if(uFx==5){float s=smoothstep(0.42,0.58,abs(fract((uv.x+uv.y)*4.0-t*0.8)*2.0-1.0));return mix(uC1,uC2,s);}
+ if(uFx==6){float w=sin(uv.x*9.0+t*2.5)*0.5+sin(uv.y*6.0-t*1.7+uv.x*3.0)*0.5;return mix(uC1,uC2,0.5+0.5*w);}
+ if(uFx==7){vec2 g=uv*16.0;vec2 id=floor(g);float r=hash(id);float tw=pow(max(0.0,sin(t*2.5+r*60.0)),10.0);
+   float d=length(fract(g)-0.5);return uC2*0.1+uC1*smoothstep(0.4,0.0,d)*tw*1.6;}
+ if(uFx==8){float y=1.0-uv.y;float n=fbm(vec2(uv.x*5.0,y*3.0-t*1.8));float heat=clamp(n*1.9-y*1.15,0.0,1.0);
+   vec3 c=mix(vec3(0.0),uC2,smoothstep(0.0,0.35,heat));return mix(c,uC1,smoothstep(0.35,0.85,heat));}
+ if(uFx==9){vec2 p=uv*8.0;float v=sin(p.x+t)+sin((p.y+t)*0.7)+sin((p.x+p.y+t)*0.5)+sin(length(p-4.0)*1.2-t*1.3);
+   return hsv(fract(v*0.12+t*0.04),0.85,1.0);}
+ if(uFx==10){float e=min(min(uv.x,1.0-uv.x),min(uv.y,1.0-uv.y));float bd=smoothstep(0.1,0.06,e);
+   float an=atan(uv.y-0.5,uv.x-0.5)/6.28318+0.5;float l=pow(fract(an*3.0-t*0.4),4.0);return uC1*bd*(0.12+1.2*l)+uC2*0.04;}
+ if(uFx==11){float x=0.5+0.5*sin(t*1.6);float bar=exp(-pow((uv.x-x)*9.0,2.0));return uC2*0.08+uC1*bar;}
+ if(uFx==12){float d=length(uv-0.5);return mix(uC2,uC1,0.5+0.5*sin(d*28.0-t*4.0));}
+ if(uFx==13){float c=mod(floor(uv.x*8.0)+floor(uv.y*8.0)+floor(t),2.0);return mix(uC1,uC2,c);}
+ if(uFx==14){if(uHasTex==1) return texture2D(uTex,clamp(uv,0.0,1.0)).rgb; return uC1*0.25;}
+ if(uFx==15){float k=floor(t*10.0);float f=step(0.9,hash(vec2(k,3.7)));float f2=step(0.95,hash(vec2(k+0.5,1.3)));
+   float fl=max(f,f2*0.6)*(0.6+0.4*hash(vec2(k,floor(uv.y*6.0))));return uC2*0.05+uC1*fl;}
+ return uC1;
+}
+void main(){
+ vec2 q=vec2(gl_FragCoord.x/uRes.x,1.0-gl_FragCoord.y/uRes.y);
+ vec3 hh=uH*vec3(q,1.0); vec2 uv=hh.xy/hh.z;
+ float al=1.0;
+ if(uEl==1){ float d=length(uv-0.5); if(d>0.5) discard; if(uFeather>0.0) al=smoothstep(0.5,0.5-uFeather*2.5,d); }
+ else {
+  bool ins=false; float md=10.0; vec2 qa=vec2(q.x*uAsp,q.y);
+  for(int i=0;i<16;i++){ if(i>=uN) break; vec2 A=uP[i]; vec2 B=uP[i+1];
+   if(((A.y>q.y)!=(B.y>q.y)) && (q.x<(B.x-A.x)*(q.y-A.y)/(B.y-A.y)+A.x)) ins=!ins;
+   vec2 a2=vec2(A.x*uAsp,A.y); vec2 b2=vec2(B.x*uAsp,B.y); vec2 pa=qa-a2; vec2 ba=b2-a2;
+   float hp=clamp(dot(pa,ba)/max(dot(ba,ba),1e-9),0.0,1.0); md=min(md,length(pa-ba*hp));
+  }
+  if(!ins) discard;
+  if(uFeather>0.0) al=smoothstep(0.0,uFeather,md);
+ }
+ vec3 c=effect(uv,uT)*uB*al;
+ gl_FragColor=vec4(c,al);
+}`;
+  function sh(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  const U = {};
+  ["uRes", "uH", "uFx", "uC1", "uC2", "uT", "uB", "uFeather", "uAsp", "uN", "uP", "uEl", "uTex", "uHasTex"].forEach((n) => U[n] = gl.getUniformLocation(prog, n));
+  const vb = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, "p");
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.uniform1i(U.uTex, 0);
+  window.__glowmapReady = true;
+  function loadTex(id) {
+    if (texs[id] || !imgs[id]) return;
+    texs[id] = { ready: false };
+    const im = new Image();
+    im.onload = () => {
+      const t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      texs[id] = { ready: true, t };
+    };
+    im.src = imgs[id];
+  }
+  Object.keys(imgs).forEach(loadTex);
+  let W = 0, H = 0;
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+    if (w !== W || h !== H) {
+      W = w;
+      H = h;
+      glc.width = ov.width = w;
+      glc.height = ov.height = h;
+      broadcast({ t: "asp", v: w / h });
+    }
+  }
+  const P = new Float32Array(34);
+  let last = 0;
+  function frame(ts) {
+    const dt = Math.min(0.1, last ? (ts - last) / 1e3 : 0);
+    last = ts;
+    resize();
+    gl.viewport(0, 0, W, H);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    audT *= Math.pow(0.02, dt);
+    aud = Math.max(audT, aud - dt * 2.2);
+    if (!state.blackout) {
+      gl.uniform2f(U.uRes, W, H);
+      gl.uniform1f(U.uAsp, W / H);
+      for (const s of state.shapes) {
+        phases[s.id] = (phases[s.id] || 0) + dt * s.speed * state.mspeed;
+        let b = state.master * s.bright * (s.audio ? 0.12 + 1.15 * aud : 1);
+        if (b <= 1e-3) continue;
+        const Mi = inv3(shapeM(s));
+        if (!Mi) continue;
+        gl.uniformMatrix3fv(U.uH, false, [Mi[0], Mi[3], Mi[6], Mi[1], Mi[4], Mi[7], Mi[2], Mi[5], Mi[8]]);
+        const fi = fxIndex(s.fx);
+        gl.uniform1i(U.uFx, fi);
+        gl.uniform3fv(U.uC1, hex3(s.c1));
+        gl.uniform3fv(U.uC2, hex3(s.c2));
+        gl.uniform1f(U.uT, phases[s.id] % 1e4);
+        gl.uniform1f(U.uB, b);
+        gl.uniform1f(U.uFeather, s.feather || 0);
+        gl.uniform1i(U.uEl, s.kind === "ellipse" ? 1 : 0);
+        const n = Math.min(16, s.pts.length);
+        for (let i = 0; i <= n; i++) {
+          const p = s.pts[i % n];
+          P[i * 2] = p[0];
+          P[i * 2 + 1] = p[1];
+        }
+        gl.uniform1i(U.uN, n);
+        gl.uniform2fv(U.uP, P);
+        const tx = s.img && texs[s.img];
+        if (fi === 14 && tx && tx.ready) {
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, tx.t);
+          gl.uniform1i(U.uHasTex, 1);
+        } else gl.uniform1i(U.uHasTex, 0);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+    }
+    drawOverlay();
+    requestAnimationFrame(frame);
+  }
+  const hexCache = {};
+  function hex3(h) {
+    if (hexCache[h]) return hexCache[h];
+    const n = parseInt((h || "#ffffff").slice(1), 16);
+    return hexCache[h] = [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255];
+  }
+  function drawOverlay() {
+    octx.clearRect(0, 0, W, H);
+    $("#ptag").style.display = state.mode === "map" && info.style.display === "none" ? "block" : "none";
+    if (state.mode !== "map") return;
+    const lw = Math.max(2, H / 400);
+    if (state.grid) {
+      octx.strokeStyle = "rgba(255,255,255,.35)";
+      octx.lineWidth = 1;
+      octx.beginPath();
+      for (let i = 1; i < 16; i++) {
+        const x = Math.round(i * W / 16) + 0.5;
+        octx.moveTo(x, 0);
+        octx.lineTo(x, H);
+      }
+      for (let i = 1; i < 9; i++) {
+        const y = Math.round(i * H / 9) + 0.5;
+        octx.moveTo(0, y);
+        octx.lineTo(W, y);
+      }
+      octx.stroke();
+      octx.strokeStyle = "rgba(255,255,255,.8)";
+      octx.lineWidth = 2;
+      octx.strokeRect(1, 1, W - 2, H - 2);
+    }
+    state.shapes.forEach((s, i) => {
+      const sel = s.id === state.sel;
+      tracePath(octx, s, W, H);
+      octx.lineWidth = sel ? lw * 2 : lw;
+      octx.strokeStyle = sel ? "#ffffff" : `hsla(${i * 67 % 360},90%,60%,.9)`;
+      octx.stroke();
+      if (sel) {
+        if (s.kind === "ellipse") {
+          octx.setLineDash([lw * 4, lw * 4]);
+          octx.beginPath();
+          s.pts.forEach((p, k) => k ? octx.lineTo(p[0] * W, p[1] * H) : octx.moveTo(p[0] * W, p[1] * H));
+          octx.closePath();
+          octx.lineWidth = lw;
+          octx.stroke();
+          octx.setLineDash([]);
+        }
+        s.pts.forEach((p, k) => {
+          const act = state.act && state.act.id === s.id && state.act.i === k;
+          const r = H / (act ? 45 : 70);
+          octx.beginPath();
+          octx.arc(p[0] * W, p[1] * H, r, 0, Math.PI * 2);
+          octx.fillStyle = act ? "rgba(255,214,10,.35)" : "rgba(255,255,255,.2)";
+          octx.fill();
+          octx.lineWidth = lw;
+          octx.strokeStyle = act ? "#ffd60a" : "#fff";
+          octx.stroke();
+        });
+      }
+    });
+    if (state.act) {
+      const s = state.shapes.find((z) => z.id === state.act.id);
+      const p = s && s.pts[state.act.i];
+      if (p) {
+        const x = p[0] * W, y = p[1] * H;
+        octx.strokeStyle = "#ffd60a";
+        octx.lineWidth = Math.max(1, lw / 2);
+        octx.beginPath();
+        octx.moveTo(x, 0);
+        octx.lineTo(x, H);
+        octx.moveTo(0, y);
+        octx.lineTo(W, y);
+        octx.stroke();
+      }
+    }
+  }
+  let saveT = null;
+  function saveSoon() {
+    clearTimeout(saveT);
+    saveT = setTimeout(() => {
+      const s = clone(state);
+      s.act = null;
+      LS.set("gm_p_state", s);
+    }, 600);
+  }
+  const chunks = {};
+  let phoneSeen = false;
+  function onMsg(sub, m) {
+    if (sub === "state") {
+      if (m && m.shapes) {
+        state = Object.assign(defaultState(), m);
+        state.act = null;
+        saveSoon();
+        updInfo();
+      }
+    } else if (sub === "a") audT = Math.max(audT, +m || 0);
+    else if (sub === "ping") {
+      phoneSeen = true;
+      updInfo();
+    } else if (sub.indexOf("img/") === 0) {
+      const [, id, k, n] = sub.split("/");
+      if (imgs[id] || typeof m !== "string" || !m) return;
+      const c = chunks[id] || (chunks[id] = []);
+      c[+k] = m;
+      let have = 0;
+      for (let i = 0; i < +n; i++) if (c[i]) have++;
+      if (have === +n) {
+        imgs[id] = c.join("");
+        delete chunks[id];
+        loadTex(id);
+        pruneImgs();
+      }
+    }
+  }
+  function pruneImgs() {
+    const used = new Set(state.shapes.map((s) => s.img).filter(Boolean));
+    const keys = Object.keys(imgs);
+    if (keys.length > 12) keys.slice(0, keys.length - 12).forEach((k) => {
+      if (!used.has(k)) delete imgs[k];
+    });
+    if (!LS.set("gm_p_imgs", imgs)) {
+      const only = {};
+      used.forEach((k) => imgs[k] && (only[k] = imgs[k]));
+      LS.set("gm_p_imgs", only);
+    }
+  }
+  function broadcast(m) {
+    if (m.t === "asp" && bus) bus.pub("hello", { online: true, asp: m.v }, true);
+  }
+  let code = LS.get("gm_code", null) || genCode();
+  LS.set("gm_code", code);
+  let bus = null;
+  const info = $("#pinfo");
+  function updInfo() {
+    info.style.display = bus && bus.up && (phoneSeen || state.shapes.length) ? "none" : "block";
+    $("#ptag").textContent = "Glowmap \xB7 " + code;
+  }
+  function stat(t) {
+    $("#pstat").textContent = t;
+  }
+  function startBus() {
+    $("#pcode").textContent = code;
+    stat("Connecting\u2026");
+    bus = makeBus(code, {
+      subs: ["state", "a", "ping", "img/#"],
+      will: { t: "hello", v: { online: false } },
+      onMsg,
+      onUp: () => {
+        bus.pub("hello", { online: true, asp: W / H || 16 / 9 }, true);
+        stat("Ready. Waiting for your phone\u2026");
+        updInfo();
+      },
+      onDown: () => {
+        stat("Can't reach the relay. Check the projector's internet. Retrying\u2026");
+        updInfo();
+      }
+    });
+  }
+  startBus();
+  updInfo();
+  $("#newCode").onclick = () => {
+    bus.pub("hello", { online: false }, true);
+    bus.close();
+    code = genCode();
+    LS.set("gm_code", code);
+    phoneSeen = false;
+    startBus();
+    updInfo();
+  };
+  const fs = () => {
+    const d = document.documentElement;
+    (d.requestFullscreen || d.webkitRequestFullscreen || (() => {
+    })).call(d);
+  };
+  $("#fsBtn").onclick = (e) => {
+    e.stopPropagation();
+    fs();
+  };
+  glc.parentElement.addEventListener("dblclick", fs);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === "f") fs();
+  });
+  let curT = null;
+  document.addEventListener("mousemove", () => {
+    $("#proj").classList.add("cur");
+    clearTimeout(curT);
+    curT = setTimeout(() => $("#proj").classList.remove("cur"), 2500);
+  });
+  let wl = null;
+  const lock = () => __async(this, null, function* () {
+    try {
+      if (navigator.wakeLock && document.visibilityState === "visible") wl = yield navigator.wakeLock.request("screen");
+    } catch (e) {
+    }
+  });
+  lock();
+  document.addEventListener("visibilitychange", lock);
+  requestAnimationFrame(frame);
+}
+function startRemote() {
+  let state = Object.assign(defaultState(), LS.get("gm_r_state", {}));
+  state.act = null;
+  let imgs = LS.get("gm_r_imgs", {});
+  const imgEls = {};
+  let asp = LS.get("gm_r_asp", 16 / 9);
+  let code = LS.get("gm_r_code", "");
+  let selPt = null, fine = false;
+  const stage = $("#stage"), sx = stage.getContext("2d");
+  let SW = 300, SH = 170;
+  $("#codeIn").value = code;
+  $("#codeIn").addEventListener("input", (e) => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  });
+  $("#codeIn").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("#connBtn").click();
+  });
+  $("#connBtn").onclick = () => {
+    const c = $("#codeIn").value.trim().toUpperCase();
+    if (c.length !== 4) {
+      $("#connMsg").textContent = "The code is 4 characters.";
+      return;
+    }
+    code = c;
+    LS.set("gm_r_code", code);
+    connect();
+  };
+  $("#changeCode").onclick = () => {
+    if (bus) bus.close();
+    bus = null;
+    $("#ctl").classList.remove("on");
+    $("#connect").style.display = "flex";
+    cmsg("");
+  };
+  function cmsg(t) {
+    $("#connMsg").textContent = t;
+  }
+  let projOnline = false;
+  function setDot(ok) {
+    $("#dot").classList.toggle("ok", ok);
+    $("#codeLbl").textContent = code + (ok ? "" : " \xB7 projector offline");
+  }
+  let bus = null, settle = null, retained = null, ready = false, sentImgs = /* @__PURE__ */ new Set(), waitT = null;
+  function connect() {
+    if (bus) bus.close();
+    ready = false;
+    retained = null;
+    projOnline = false;
+    sentImgs = /* @__PURE__ */ new Set();
+    cmsg("Connecting\u2026");
+    bus = makeBus(code, {
+      subs: ["hello", "state"],
+      onMsg: (sub, m) => {
+        if (sub === "state" && !ready) retained = m;
+        if (sub === "hello") {
+          projOnline = !!(m && m.online);
+          if (m && m.asp) {
+            asp = m.asp;
+            LS.set("gm_r_asp", asp);
+            if (ready) layout();
+          }
+          if (ready) {
+            setDot(projOnline);
+            if (projOnline) {
+              bus.pub("ping", 1);
+              syncImgs();
+              pushNow();
+            }
+          } else if (projOnline) cmsg("Found the projector\u2026");
+        }
+      },
+      onUp: () => {
+        clearTimeout(settle);
+        clearTimeout(waitT);
+        if (ready) {
+          setDot(projOnline);
+          if (projOnline) {
+            syncImgs();
+            pushNow();
+          }
+          return;
+        }
+        cmsg("Looking for projector " + code + "\u2026");
+        settle = setTimeout(() => {
+          if (!projOnline) {
+            cmsg("No projector is showing " + code + " right now. Open the #projector page on the projector and check the code. Still listening\u2026");
+            return;
+          }
+          enter();
+        }, 1200);
+        waitT = setInterval(() => {
+          if (!ready && projOnline) {
+            clearInterval(waitT);
+            enter();
+          }
+        }, 500);
+      },
+      onDown: () => {
+        if (ready) setDot(false);
+        else cmsg("Can't reach the relay. Check your internet. Retrying\u2026");
+      }
+    });
+  }
+  function enter() {
+    if (ready) return;
+    ready = true;
+    clearInterval(waitT);
+    if (!state.shapes.length && retained && retained.shapes && retained.shapes.length) {
+      state = Object.assign(defaultState(), retained);
+      state.act = null;
+      state.sel = null;
+    }
+    cmsg("");
+    $("#connect").style.display = "none";
+    $("#ctl").classList.add("on");
+    setDot(true);
+    bus.pub("ping", 1);
+    layout();
+    refresh();
+    syncImgs();
+    pushNow();
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && bus && !bus.up) connect();
+  });
+  function sendImg(id) {
+    const d = imgs[id];
+    if (!d || !bus) return;
+    const N = 48e3, n = Math.ceil(d.length / N);
+    for (let k = 0; k < n; k++) bus.pub("img/" + id + "/" + k + "/" + n, d.slice(k * N, (k + 1) * N), true);
+    sentImgs.add(id);
+  }
+  function syncImgs() {
+    new Set(state.shapes.map((s) => s.img).filter(Boolean)).forEach((id) => {
+      if (!sentImgs.has(id)) sendImg(id);
+    });
+  }
+  let lastPush = 0, pushT = null;
+  function push() {
+    const now = Date.now(), wait = 40 - (now - lastPush);
+    if (wait <= 0) pushNow();
+    else if (!pushT) pushT = setTimeout(() => {
+      pushT = null;
+      pushNow();
+    }, wait);
+  }
+  function pushNow() {
+    lastPush = Date.now();
+    if (bus && ready) {
+      const s = clone(state);
+      bus.pub("state", s, true);
+    }
+    saveSoon();
+  }
+  function send(m) {
+    if (m.t === "a" && bus && ready) bus.pub("a", m.v);
+  }
+  let saveT = null;
+  function saveSoon() {
+    clearTimeout(saveT);
+    saveT = setTimeout(() => {
+      const s = clone(state);
+      s.act = null;
+      LS.set("gm_r_state", s);
+    }, 500);
+  }
+  function saveImgs() {
+    const used = new Set(state.shapes.map((s) => s.img).filter(Boolean));
+    LS.get("gm_scenes", []).forEach((sc) => sc.state.shapes.forEach((s) => s.img && used.add(s.img)));
+    const keep = {};
+    used.forEach((k) => imgs[k] && (keep[k] = imgs[k]));
+    imgs = keep;
+    LS.set("gm_r_imgs", imgs);
+  }
+  function layout() {
+    const maxW = (window.matchMedia("(orientation:landscape) and (max-height:500px)").matches ? innerWidth * 0.58 : innerWidth) - 24;
+    const maxH = innerHeight * (innerHeight > 500 ? 0.4 : 0.8);
+    SW = maxW;
+    SH = SW / asp;
+    if (SH > maxH) {
+      SH = maxH;
+      SW = SH * asp;
+    }
+    SW = Math.floor(SW);
+    SH = Math.floor(SH);
+    const dpr = window.devicePixelRatio || 1;
+    stage.style.width = SW + "px";
+    stage.style.height = SH + "px";
+    stage.width = SW * dpr;
+    stage.height = SH * dpr;
+    sx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+  window.addEventListener("resize", layout);
+  const getImg = (id) => {
+    if (!id || !imgs[id]) return null;
+    if (!imgEls[id]) {
+      const im = new Image();
+      im.onload = draw;
+      im.src = imgs[id];
+      imgEls[id] = im;
+    }
+    return imgEls[id].complete ? imgEls[id] : null;
+  };
+  function fillFor(s) {
+    const f = FX[fxIndex(s.fx)];
+    const o = outline(s);
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    o.forEach(([x, y]) => {
+      x0 = Math.min(x0, x);
+      y0 = Math.min(y0, y);
+      x1 = Math.max(x1, x);
+      y1 = Math.max(y1, y);
+    });
+    const g = sx.createLinearGradient(x0 * SW, y0 * SH, x1 * SW, y1 * SH);
+    if (f.g === "c12") {
+      g.addColorStop(0, s.c1);
+      g.addColorStop(1, s.c2);
+      return g;
+    }
+    if (f.g === "rb") {
+      ["#f00", "#ff0", "#0f0", "#0ff", "#00f", "#f0f"].forEach((c, i) => g.addColorStop(i / 5, c));
+      return g;
+    }
+    if (f.g === "st") {
+      for (let i = 0; i < 8; i++) {
+        g.addColorStop(i / 8, i % 2 ? s.c2 : s.c1);
+        g.addColorStop((i + 1) / 8 - 1e-3, i % 2 ? s.c2 : s.c1);
+      }
+      return g;
+    }
+    return s.c1;
+  }
+  function draw() {
+    sx.clearRect(0, 0, SW, SH);
+    sx.fillStyle = "#000";
+    sx.fillRect(0, 0, SW, SH);
+    if (state.grid) {
+      sx.strokeStyle = "rgba(255,255,255,.08)";
+      sx.lineWidth = 1;
+      sx.beginPath();
+      for (let i = 1; i < 16; i++) {
+        const x = Math.round(i * SW / 16) + 0.5;
+        sx.moveTo(x, 0);
+        sx.lineTo(x, SH);
+      }
+      for (let i = 1; i < 9; i++) {
+        const y = Math.round(i * SH / 9) + 0.5;
+        sx.moveTo(0, y);
+        sx.lineTo(SW, y);
+      }
+      sx.stroke();
+    }
+    state.shapes.forEach((s2) => {
+      sx.globalAlpha = state.blackout ? 0.15 : 0.25 + 0.6 * s2.bright * state.master;
+      tracePath(sx, s2, SW, SH);
+      const im = s2.fx === "image" && getImg(s2.img);
+      if (im) {
+        sx.save();
+        sx.clip();
+        const o = outline(s2);
+        let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+        o.forEach(([x, y]) => {
+          x0 = Math.min(x0, x);
+          y0 = Math.min(y0, y);
+          x1 = Math.max(x1, x);
+          y1 = Math.max(y1, y);
+        });
+        sx.drawImage(im, x0 * SW, y0 * SH, (x1 - x0) * SW, (y1 - y0) * SH);
+        sx.restore();
+      } else {
+        sx.fillStyle = fillFor(s2);
+        sx.fill();
+      }
+      sx.globalAlpha = 1;
+      const sel = s2.id === state.sel;
+      tracePath(sx, s2, SW, SH);
+      sx.lineWidth = sel ? 2 : 1;
+      sx.strokeStyle = sel ? "#fff" : "rgba(255,255,255,.4)";
+      sx.stroke();
+    });
+    const s = selShape();
+    if (s) {
+      if (s.kind === "ellipse") {
+        sx.setLineDash([4, 4]);
+        sx.beginPath();
+        s.pts.forEach((p, k) => k ? sx.lineTo(p[0] * SW, p[1] * SH) : sx.moveTo(p[0] * SW, p[1] * SH));
+        sx.closePath();
+        sx.strokeStyle = "rgba(255,255,255,.6)";
+        sx.lineWidth = 1;
+        sx.stroke();
+        sx.setLineDash([]);
+      }
+      s.pts.forEach((p, k) => {
+        const on = selPt === k;
+        sx.beginPath();
+        sx.arc(p[0] * SW, p[1] * SH, on ? 10 : 8, 0, Math.PI * 2);
+        sx.fillStyle = on ? "#ffd60a" : "rgba(124,92,255,.9)";
+        sx.fill();
+        sx.lineWidth = 2;
+        sx.strokeStyle = "#fff";
+        sx.stroke();
+      });
+    }
+  }
+  const selShape = () => state.shapes.find((s) => s.id === state.sel) || null;
+  const ptrs = /* @__PURE__ */ new Map();
+  let drag = null, gest = null;
+  const pos = (e) => {
+    const r = stage.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  function hit(p) {
+    const R = 26, order = [...state.shapes];
+    const s0 = selShape();
+    if (s0) {
+      order.splice(order.indexOf(s0), 1);
+      order.push(s0);
+    }
+    for (let j = order.length - 1; j >= 0; j--) {
+      const s = order[j];
+      let best = -1, bd = R;
+      s.pts.forEach((q, i) => {
+        const d = Math.hypot(q[0] * SW - p.x, q[1] * SH - p.y);
+        if (d < bd) {
+          bd = d;
+          best = i;
+        }
+      });
+      if (best >= 0) return { s, type: "pt", i: best };
+    }
+    for (let j = order.length - 1; j >= 0; j--) {
+      const s = order[j];
+      if (pointInPoly(p.x / SW, p.y / SH, outline(s))) return { s, type: "body" };
+    }
+    return null;
+  }
+  stage.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    try {
+      stage.setPointerCapture(e.pointerId);
+    } catch (_) {
+    }
+    const p = pos(e);
+    ptrs.set(e.pointerId, p);
+    if (ptrs.size === 2) {
+      startGesture();
+      return;
+    }
+    if (ptrs.size > 2) return;
+    const h = hit(p);
+    if (h) {
+      state.sel = h.s.id;
+      selPt = h.type === "pt" ? h.i : null;
+      drag = { h, start: p, pts: clone(h.s.pts) };
+      state.act = h.type === "pt" ? { id: h.s.id, i: h.i } : null;
+    } else {
+      state.sel = null;
+      selPt = null;
+      drag = null;
+      state.act = null;
+    }
+    refresh();
+    push();
+  });
+  stage.addEventListener("pointermove", (e) => {
+    if (!ptrs.has(e.pointerId)) return;
+    const p = pos(e);
+    ptrs.set(e.pointerId, p);
+    if (gest) {
+      applyGesture();
+      return;
+    }
+    if (!drag) return;
+    const k = fine ? 0.2 : 1;
+    const dx = (p.x - drag.start.x) / SW * k, dy = (p.y - drag.start.y) / SH * k;
+    const s = drag.h.s;
+    if (drag.h.type === "pt") {
+      const i = drag.h.i;
+      let nx = clamp(drag.pts[i][0] + dx, 0, 1), ny = clamp(drag.pts[i][1] + dy, 0, 1);
+      if (!fine) {
+        let bd = 12;
+        state.shapes.forEach((o) => {
+          if (o === s) return;
+          o.pts.forEach((q) => {
+            const d = Math.hypot((q[0] - nx) * SW, (q[1] - ny) * SH);
+            if (d < bd) {
+              bd = d;
+              nx = q[0];
+              ny = q[1];
+            }
+          });
+        });
+      }
+      s.pts[i] = [nx, ny];
+    } else {
+      s.pts = drag.pts.map((q) => [clamp(q[0] + dx, -0.5, 1.5), clamp(q[1] + dy, -0.5, 1.5)]);
+    }
+    draw();
+    push();
+  });
+  const end = (e) => {
+    ptrs.delete(e.pointerId);
+    if (ptrs.size < 2 && gest) {
+      gest = null;
+      drag = null;
+    }
+    if (ptrs.size === 0) {
+      drag = null;
+      state.act = null;
+      push();
+    }
+  };
+  stage.addEventListener("pointerup", end);
+  stage.addEventListener("pointercancel", end);
+  function startGesture() {
+    const s = selShape();
+    drag = null;
+    if (!s) return;
+    const [a, b] = [...ptrs.values()];
+    const C = s.pts.reduce((m, q) => [m[0] + q[0] * SW / s.pts.length, m[1] + q[1] * SH / s.pts.length], [0, 0]);
+    gest = { s, pts: clone(s.pts), d0: Math.hypot(b.x - a.x, b.y - a.y) || 1, a0: Math.atan2(b.y - a.y, b.x - a.x), m0: [(a.x + b.x) / 2, (a.y + b.y) / 2], C };
+    selPt = null;
+    state.act = null;
+  }
+  function applyGesture() {
+    const g = gest, [a, b] = [...ptrs.values()];
+    const sc = Math.hypot(b.x - a.x, b.y - a.y) / g.d0, rot = Math.atan2(b.y - a.y, b.x - a.x) - g.a0;
+    const tx = (a.x + b.x) / 2 - g.m0[0], ty = (a.y + b.y) / 2 - g.m0[1];
+    const cs = Math.cos(rot), sn = Math.sin(rot);
+    g.s.pts = g.pts.map((q) => {
+      const vx = q[0] * SW - g.C[0], vy = q[1] * SH - g.C[1];
+      return [(g.C[0] + (vx * cs - vy * sn) * sc + tx) / SW, (g.C[1] + (vx * sn + vy * cs) * sc + ty) / SH];
+    });
+    draw();
+    push();
+  }
+  const uid = () => "s" + Math.random().toString(36).slice(2, 9);
+  let colorIx = state.shapes.length;
+  function addShape(kind) {
+    const cx = 0.5 + (Math.random() - 0.5) * 0.15, cy = 0.5 + (Math.random() - 0.5) * 0.15, r = 0.12, dy = r * asp;
+    let pts, k = "poly";
+    if (kind === "rect" || kind === "circle") {
+      pts = [[cx - r, cy - dy], [cx + r, cy - dy], [cx + r, cy + dy], [cx - r, cy + dy]];
+      if (kind === "circle") k = "ellipse";
+    } else if (kind === "tri") pts = [[cx, cy - dy], [cx + r, cy + dy], [cx - r, cy + dy]];
+    else {
+      pts = [];
+      for (let i = 0; i < 6; i++) {
+        const a = -Math.PI / 2 + i * Math.PI / 3;
+        pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * dy]);
+      }
+    }
+    const c1 = PALETTE[1 + colorIx++ % (PALETTE.length - 1)];
+    const s = { id: uid(), kind: k, pts, fx: "solid", c1, c2: "#0a84ff", speed: 1, bright: 1, feather: 0, audio: false, img: null };
+    state.shapes.push(s);
+    state.sel = s.id;
+    selPt = null;
+    if (state.mode !== "map") state.mode = "map";
+    refresh();
+    pushNow();
+  }
+  $$("[data-add]").forEach((b) => b.onclick = () => addShape(b.dataset.add));
+  $("#dupBtn").onclick = () => {
+    const s = selShape();
+    if (!s) return;
+    const n = clone(s);
+    n.id = uid();
+    n.pts = n.pts.map((q) => [q[0] + 0.03, q[1] + 0.03]);
+    state.shapes.push(n);
+    state.sel = n.id;
+    refresh();
+    pushNow();
+  };
+  $("#frontBtn").onclick = () => {
+    const s = selShape();
+    if (!s) return;
+    state.shapes.splice(state.shapes.indexOf(s), 1);
+    state.shapes.push(s);
+    refresh();
+    pushNow();
+  };
+  $("#delBtn").onclick = () => {
+    const s = selShape();
+    if (!s) return;
+    state.shapes.splice(state.shapes.indexOf(s), 1);
+    state.sel = null;
+    selPt = null;
+    refresh();
+    pushNow();
+  };
+  $("#addPt").onclick = () => {
+    const s = selShape();
+    if (!s || s.kind === "ellipse" || s.pts.length >= 16) return;
+    let i = selPt;
+    if (i == null) {
+      let best = 0, bl = -1;
+      s.pts.forEach((p2, k) => {
+        const q2 = s.pts[(k + 1) % s.pts.length];
+        const l = Math.hypot((q2[0] - p2[0]) * SW, (q2[1] - p2[1]) * SH);
+        if (l > bl) {
+          bl = l;
+          best = k;
+        }
+      });
+      i = best;
+    }
+    const p = s.pts[i], q = s.pts[(i + 1) % s.pts.length];
+    s.pts.splice(i + 1, 0, [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]);
+    selPt = i + 1;
+    refresh();
+    pushNow();
+  };
+  $("#delPt").onclick = () => {
+    const s = selShape();
+    if (!s || s.kind === "ellipse" || s.pts.length <= 3) return;
+    s.pts.splice(selPt != null ? selPt : s.pts.length - 1, 1);
+    selPt = null;
+    refresh();
+    pushNow();
+  };
+  $("#fineBtn").onclick = () => {
+    fine = !fine;
+    refresh();
+  };
+  $$("[data-n]").forEach((b) => {
+    let t1 = null, t2 = null;
+    const step = () => {
+      const s = selShape();
+      if (!s) return;
+      const [nx, ny] = b.dataset.n.split(",").map(Number), st = fine ? 6e-4 : 3e-3;
+      const mv = (q) => [clamp(q[0] + nx * st, -0.5, 1.5), clamp(q[1] + ny * st, -0.5, 1.5)];
+      if (selPt != null) {
+        s.pts[selPt] = mv(s.pts[selPt]);
+        state.act = { id: s.id, i: selPt };
+      } else s.pts = s.pts.map(mv);
+      draw();
+      push();
+    };
+    const stop = () => {
+      clearTimeout(t1);
+      clearInterval(t2);
+      if (state.act) {
+        state.act = null;
+        push();
+      }
+    };
+    b.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      step();
+      t1 = setTimeout(() => t2 = setInterval(step, 60), 350);
+    });
+    ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => b.addEventListener(ev, stop));
+  });
+  const swatchCss = (f) => f.g === "rb" ? "linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f)" : f.g === "st" ? "repeating-linear-gradient(45deg,#ff2d55 0 6px,#0a84ff 6px 12px)" : f.g === "img" ? "linear-gradient(135deg,#30d158,#0a84ff)" : f.g === "c12" ? "linear-gradient(90deg,#ff2d55,#0a84ff)" : "#ff2d55";
+  const fxIcons = { fire: "linear-gradient(0deg,#ff2200,#ffd000)", sparkle: "radial-gradient(circle,#fff 15%,#223 20%)", strobe: "linear-gradient(90deg,#fff 50%,#000 50%)", pulse: "radial-gradient(circle,#ff2d55,#300)", chase: "linear-gradient(90deg,#000,#ffd60a,#000)", scanner: "linear-gradient(90deg,#100,#ff2d55,#100)", storm: "linear-gradient(90deg,#112,#cde,#112)", ripple: "repeating-radial-gradient(circle,#ff2d55 0 4px,#0a84ff 4px 8px)", waves: "repeating-linear-gradient(90deg,#ff2d55 0 8px,#0a84ff 8px 16px)" };
+  $("#fxGrid").innerHTML = FX.map((f) => `<div class="fx" data-fx="${f.k}"><i style="background:${fxIcons[f.k] || swatchCss(f)}"></i>${f.n}</div>`).join("");
+  $$(".fx").forEach((el) => el.onclick = () => {
+    const s = selShape();
+    if (!s) return;
+    const was = s.fx;
+    s.fx = el.dataset.fx;
+    if (s.fx === "fire" && was !== "fire") {
+      s.c1 = "#ffd60a";
+      s.c2 = "#ff2200";
+    }
+    if (s.fx === "image" && !s.img) $("#imgIn").click();
+    refresh();
+    pushNow();
+  });
+  function swatches(el, key) {
+    el.innerHTML = PALETTE.map((c) => `<div class="sw" data-c="${c}" style="background:${c}"></div>`).join("");
+    el.querySelectorAll(".sw").forEach((w) => w.onclick = () => {
+      const s = selShape();
+      if (!s) return;
+      s[key] = w.dataset.c;
+      refresh();
+      push();
+    });
+  }
+  swatches($("#swA"), "c1");
+  swatches($("#swB"), "c2");
+  $("#c1").oninput = (e) => {
+    const s = selShape();
+    if (s) {
+      s.c1 = e.target.value;
+      draw();
+      markSw();
+      push();
+    }
+  };
+  $("#c2").oninput = (e) => {
+    const s = selShape();
+    if (s) {
+      s.c2 = e.target.value;
+      draw();
+      markSw();
+      push();
+    }
+  };
+  const slide = (id, key, glob) => $(id).addEventListener("input", (e) => {
+    const v = +e.target.value;
+    if (glob) state[key] = v;
+    else {
+      const s = selShape();
+      if (!s) return;
+      s[key] = v;
+    }
+    draw();
+    push();
+  });
+  slide("#sBright", "bright");
+  slide("#sSpeed", "speed");
+  slide("#sFeather", "feather");
+  slide("#mBright", "master", true);
+  slide("#mSpeed", "mspeed", true);
+  $("#audBtn").onclick = () => {
+    const s = selShape();
+    if (!s) return;
+    s.audio = !s.audio;
+    refresh();
+    push();
+  };
+  $("#allBtn").onclick = () => {
+    const s = selShape();
+    if (!s) return;
+    state.shapes.forEach((o) => {
+      if (o !== s) Object.assign(o, { fx: s.fx, c1: s.c1, c2: s.c2, speed: s.speed, bright: s.bright, feather: s.feather, audio: s.audio, img: s.img });
+    });
+    refresh();
+    pushNow();
+  };
+  $("#imgIn").onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    const s = selShape();
+    if (!f || !s) return;
+    const url = URL.createObjectURL(f), im = new Image();
+    im.onload = () => {
+      const max = 1280, sc = Math.min(1, max / Math.max(im.width, im.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(im.width * sc);
+      c.height = Math.round(im.height * sc);
+      c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+      const d = c.toDataURL("image/jpeg", 0.85), id = "i" + Date.now().toString(36);
+      URL.revokeObjectURL(url);
+      imgs[id] = d;
+      s.img = id;
+      s.fx = "image";
+      sendImg(id);
+      saveImgs();
+      refresh();
+      pushNow();
+    };
+    im.src = url;
+  };
+  $$("#modeSeg button").forEach((b) => b.onclick = () => {
+    state.mode = b.dataset.mode;
+    if (state.mode === "show") state.act = null;
+    refresh();
+    pushNow();
+  });
+  $("#blkBtn").onclick = () => {
+    state.blackout = !state.blackout;
+    refresh();
+    pushNow();
+  };
+  $("#gridBtn").onclick = () => {
+    state.grid = !state.grid;
+    if (state.grid) state.mode = "map";
+    refresh();
+    pushNow();
+  };
+  $("#clearAll").onclick = () => {
+    $("#clearConfirm").style.display = "flex";
+  };
+  $("#clearNo").onclick = () => {
+    $("#clearConfirm").style.display = "none";
+  };
+  $("#clearYes").onclick = () => {
+    state.shapes = [];
+    state.sel = null;
+    selPt = null;
+    $("#clearConfirm").style.display = "none";
+    refresh();
+    pushNow();
+  };
+  let mic = null;
+  $("#micBtn").onclick = () => __async(this, null, function* () {
+    if (mic) {
+      clearInterval(mic.t);
+      mic.st.getTracks().forEach((t) => t.stop());
+      try {
+        mic.ctx.close();
+      } catch (e) {
+      }
+      mic = null;
+      send({ t: "a", v: 0 });
+      refresh();
+      return;
+    }
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    try {
+      const st = yield navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      yield ctx.resume();
+      const an = ctx.createAnalyser();
+      an.fftSize = 1024;
+      ctx.createMediaStreamSource(st).connect(an);
+      const buf = new Float32Array(an.fftSize);
+      let avg = 0.02, peak = 0.05;
+      const t = setInterval(() => {
+        an.getFloatTimeDomainData(buf);
+        let s = 0;
+        for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+        const rms = Math.sqrt(s / buf.length);
+        avg = avg * 0.99 + rms * 0.01;
+        peak = Math.max(rms, peak * 0.997, avg * 1.5, 0.01);
+        const lv = clamp((rms - avg * 0.7) / (peak - avg * 0.7), 0, 1);
+        send({ t: "a", v: +lv.toFixed(3) });
+        $("#meter i").style.width = lv * 100 + "%";
+      }, 33);
+      mic = { st, ctx, t };
+      if (!state.shapes.some((s) => s.audio)) state.shapes.forEach((s) => s.audio = true);
+      refresh();
+      pushNow();
+    } catch (e) {
+      try {
+        ctx.close();
+      } catch (_) {
+      }
+      $("#sceneMsg").textContent = "Microphone not available (" + (e.name || e) + "). It needs the page on https.";
+    }
+  });
+  function renderScenes() {
+    const list = LS.get("gm_scenes", []), el = $("#sceneList");
+    el.innerHTML = "";
+    if (!list.length) {
+      el.innerHTML = '<span class="mute small">No saved scenes yet.</span>';
+      return;
+    }
+    list.forEach((sc, i) => {
+      const d = document.createElement("div");
+      d.className = "scene";
+      const nm = document.createElement("span");
+      nm.textContent = sc.name;
+      nm.style.cursor = "pointer";
+      const del = document.createElement("button");
+      del.textContent = "\u2715";
+      del.className = "mute";
+      nm.onclick = () => {
+        const keepMode = state.mode;
+        state = Object.assign(defaultState(), clone(sc.state));
+        state.mode = keepMode;
+        state.sel = null;
+        state.act = null;
+        selPt = null;
+        Object.assign(imgs, sc.imgs || {});
+        syncImgs();
+        refresh();
+        pushNow();
+        $("#sceneMsg").textContent = 'Loaded "' + sc.name + '".';
+      };
+      del.onclick = () => {
+        const l = LS.get("gm_scenes", []);
+        l.splice(i, 1);
+        LS.set("gm_scenes", l);
+        renderScenes();
+      };
+      d.append(nm, del);
+      el.append(d);
+    });
+  }
+  $("#saveScene").onclick = () => {
+    const list = LS.get("gm_scenes", []);
+    const name = $("#sceneName").value.trim() || "Scene " + (list.length + 1);
+    const st = clone(state);
+    st.sel = null;
+    st.act = null;
+    const used = {};
+    st.shapes.forEach((s) => s.img && imgs[s.img] && (used[s.img] = imgs[s.img]));
+    const ix = list.findIndex((s) => s.name === name);
+    const entry = { name, state: st, imgs: used };
+    if (ix >= 0) list[ix] = entry;
+    else list.push(entry);
+    $("#sceneMsg").textContent = LS.set("gm_scenes", list) ? 'Saved "' + name + '".' : "Phone storage is full. Delete a scene with big images.";
+    $("#sceneName").value = "";
+    renderScenes();
+  };
+  function markSw() {
+    const s = selShape();
+    if (!s) return;
+    $$("#swA .sw").forEach((w) => w.classList.toggle("on", w.dataset.c === s.c1));
+    $$("#swB .sw").forEach((w) => w.classList.toggle("on", w.dataset.c === s.c2));
+  }
+  function refresh() {
+    const s = selShape();
+    $("#noSel").style.display = s ? "none" : "block";
+    $("#selBox").style.display = s ? "block" : "none";
+    $$("#modeSeg button").forEach((b) => b.classList.toggle("on", b.dataset.mode === state.mode));
+    $("#blkBtn").classList.toggle("on", state.blackout);
+    $("#gridBtn").classList.toggle("on", state.grid);
+    $("#micBtn").classList.toggle("on", !!mic);
+    $("#meterRow").style.display = mic ? "flex" : "none";
+    $("#fineBtn").classList.toggle("on", fine);
+    $("#mBright").value = state.master;
+    $("#mSpeed").value = state.mspeed;
+    if (s) {
+      $$(".fx").forEach((el) => el.classList.toggle("on", el.dataset.fx === s.fx));
+      $("#imgRow").style.display = s.fx === "image" ? "flex" : "none";
+      $("#c1").value = s.c1;
+      $("#c2").value = s.c2;
+      markSw();
+      $("#sBright").value = s.bright;
+      $("#sSpeed").value = s.speed;
+      $("#sFeather").value = s.feather || 0;
+      $("#audBtn").classList.toggle("on", !!s.audio);
+      const poly = s.kind !== "ellipse";
+      $("#addPt").style.display = $("#delPt").style.display = poly ? "" : "none";
+      $("#nudLbl").textContent = selPt != null ? "Arrows nudge the yellow corner. Tap inside the shape to nudge all of it." : "Arrows nudge the whole shape. Tap a corner to nudge just that corner.";
+    }
+    draw();
+  }
+  renderScenes();
+  if (code) {
+    $("#codeIn").value = code;
+    connect();
+  }
+  layout();
+  refresh();
+}
+route();
+
+</script>
+</body>
+</html>
